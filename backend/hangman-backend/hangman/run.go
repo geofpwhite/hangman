@@ -31,19 +31,15 @@ type state struct {
 func Run() {
 	currentWord = ""
 	revealedWord = ""
-	guessed := make(map[rune]bool)
 
 	defer db.Close()
 
-	for _, _rune := range "abcdefghijklmnopqrstuvwxyz" {
-		guessed[_rune] = false
-	}
 	players = make([]string, 0)
 	inputChannel := make(chan (info))
 	outputChannel := make(chan (state))
 	timeoutChannel := make(chan (bool))
 	needNewWord = true
-	guessesLeft = 10
+	guessesLeft = 5
 	/* defer close(inputChannel)
 	defer close(outputChannel)
 	defer close(timeoutChannel) */

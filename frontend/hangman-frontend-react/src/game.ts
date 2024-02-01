@@ -40,7 +40,7 @@ export class Game {
         if (gs.revealedWord !== "") {
             this.state.revealedWord = gs.revealedWord
         }
-        if (gs.lettersGuessed !== "") {
+        if (gs.lettersGuessed !== null) {
             this.state.lettersGuessed = gs.lettersGuessed
         }
         if (gs.guessesLeft !== -1) {

@@ -26,15 +26,15 @@ const HangmanComponent: React.FC<WebSocketComponentProps> = () => {
   const [gameState, setGameState] = useState<GameState>();
   const [inputValue, setInputValue] = useState('');
   const [inputValue2, setInputValue2] = useState('');
+  const letters: string = "abcdefghijklmnopqrstuvwxyz";
   var game = new Game()
 
-  const letters: string = "abcdefghijklmnopqrstuvwxyz";
   const drawHangMan = () => {
     if (!gameState) {
       return
     }
     if (gameState.guessesLeft >= 10) {
-      return
+      return <div style={{ width: "300px", height: "100px" }} />
     } else if (gameState?.guessesLeft < 10) {
       if (gameState.needNewWord) {
         return <img src={GAME_OVER} style={{ width: "300px", height: "100px" }} alt="" />
@@ -96,7 +96,10 @@ const HangmanComponent: React.FC<WebSocketComponentProps> = () => {
   const changeUsername = () => {
     webSocket?.send("u:" + inputValue);
     setInputValue('');
+    setWantsToChangeUsername(false)
   };
+
+
 
   const handleChange2 = (event: React.ChangeEvent<HTMLInputElement>) => {
     setInputValue2(event.target.value);
@@ -206,11 +209,39 @@ const HangmanComponent: React.FC<WebSocketComponentProps> = () => {
     return turnText
   }
 
+
+  const [wantsToChangeUsername, setWantsToChangeUsername] = useState<boolean>(false);
+
+  const usernameInputBox = () => {
+    if (wantsToChangeUsername) {
+      return (
+        <div className="change-username">
+          <div>
+            <label htmlFor="myInput">Username: </label>
+            <input
+              type="text"
+              id="myInput"
+              value={inputValue}
+              onChange={handleChange}
+              placeholder="Type here..."
+            />
+            <button onClick={changeUsername}>Submit</button>
+          </div>
+        </div>
+      )
+    } else {
+      return (
+        <div>
+          <button type="button" onClick={() => { setWantsToChangeUsername(true) }}>Change Username</button>
+        </div>
+      )
+    }
+  }
+
   const splitWord = () => {
     var str = ""
     gameState?.revealedWord.split("").forEach((value, index) => {
       str += " " + value
-
     })
     return str
   }
@@ -273,20 +304,9 @@ const HangmanComponent: React.FC<WebSocketComponentProps> = () => {
         PlayerNames()
       }
 
-
-      <div className="change-username">
-        <div>
-          <label htmlFor="myInput">Username: </label>
-          <input
-            type="text"
-            id="myInput"
-            value={inputValue}
-            onChange={handleChange}
-            placeholder="Type here..."
-          />
-          <button onClick={changeUsername}>Submit</button>
-        </div>
-      </div>
+      {
+        usernameInputBox()
+      }
 
       {
         gameState?.needNewWord ? NewWordInputBox() : (<div />)
