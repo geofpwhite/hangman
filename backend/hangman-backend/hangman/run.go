@@ -15,7 +15,7 @@ type info struct {
 
 var db *sql.DB
 
-type state struct {
+type clientState struct {
 	Players        []string `json:"players"`
 	Turn           int      `json:"turn"`
 	Host           int      `json:"host"`
@@ -29,20 +29,24 @@ type state struct {
 }
 
 func Run() {
-	currentWord = ""
-	revealedWord = ""
+	sState.currentWord = ""
+	sState.revealedWord = ""
 
 	defer db.Close()
+	sState.winner = -1
+	wordCheck, _ := sql.Open("sqlite3", "./words.db")
+	sState.wordCheck = wordCheck
 
-	players = make([]string, 0)
+	sState.players = make([]string, 0)
 	inputChannel := make(chan (info))
-	outputChannel := make(chan (state))
+	outputChannel := make(chan (clientState))
 	timeoutChannel := make(chan (bool))
-	needNewWord = true
-	guessesLeft = 5
+	sState.needNewWord = true
+	sState.guessesLeft = 6
 	/* defer close(inputChannel)
 	defer close(outputChannel)
 	defer close(timeoutChannel) */
 	go game(inputChannel, timeoutChannel, outputChannel)
+	// go newView(cliChannel)
 	server(inputChannel, timeoutChannel, outputChannel)
 }

@@ -11,6 +11,7 @@ import LEFT6 from "./6left.png"
 import LEFT7 from "./7left.png"
 import LEFT8 from "./8left.png"
 import LEFT9 from "./9left.png"
+import GRATEFUL from "./grateful.jpeg"
 
 
 
@@ -24,8 +25,8 @@ interface WebSocketComponentProps { }
 const HangmanComponent: React.FC<WebSocketComponentProps> = () => {
   const [webSocket, setWebSocket] = useState<WebSocket | null>(null);
   const [gameState, setGameState] = useState<GameState>();
-  const [inputValue, setInputValue] = useState('');
-  const [inputValue2, setInputValue2] = useState('');
+  const [usernameInputValue, setInputValue] = useState('');
+  const [newWordInputValue, setInputValue2] = useState('');
   const letters: string = "abcdefghijklmnopqrstuvwxyz";
   var game = new Game()
 
@@ -37,7 +38,12 @@ const HangmanComponent: React.FC<WebSocketComponentProps> = () => {
       return <div style={{ width: "300px", height: "100px" }} />
     } else if (gameState?.guessesLeft < 10) {
       if (gameState.needNewWord) {
-        return <img src={GAME_OVER} style={{ width: "300px", height: "100px" }} alt="" />
+        if (gameState.winner === HOST_WINS) {
+
+          return <img src={GAME_OVER} style={{ width: "300px", height: "100px" }} alt="" />
+        } else {
+          return <img src={GRATEFUL} style={{ width: "300px", height: "100px" }} alt="" />
+        }
       }
       return (
         <img src={guessesLeftImages[gameState?.guessesLeft]} style={{ width: "300px", height: "100px" }} alt="" />
@@ -83,8 +89,8 @@ const HangmanComponent: React.FC<WebSocketComponentProps> = () => {
   };
 
   const sendNewWord = () => {
-    let c = inputValue2.toLowerCase()
-    for (let i = 0; i < inputValue2.length; i++) {
+    let c = newWordInputValue.toLowerCase()
+    for (let i = 0; i < newWordInputValue.length; i++) {
       if (!letters.includes(c[i])) {
         //send error, letters only
         return
@@ -94,7 +100,7 @@ const HangmanComponent: React.FC<WebSocketComponentProps> = () => {
   };
 
   const changeUsername = () => {
-    webSocket?.send("u:" + inputValue);
+    webSocket?.send("u:" + usernameInputValue);
     setInputValue('');
     setWantsToChangeUsername(false)
   };
@@ -153,7 +159,7 @@ const HangmanComponent: React.FC<WebSocketComponentProps> = () => {
               <input
                 type="text"
                 id="myInput"
-                value={inputValue2}
+                value={newWordInputValue}
                 onChange={handleChange2}
                 placeholder="Type here..."
               />
@@ -221,7 +227,7 @@ const HangmanComponent: React.FC<WebSocketComponentProps> = () => {
             <input
               type="text"
               id="myInput"
-              value={inputValue}
+              value={usernameInputValue}
               onChange={handleChange}
               placeholder="Type here..."
             />

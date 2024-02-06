@@ -11,7 +11,7 @@ import (
 const HOST_WINS = 0
 const HOST_LOSES = 1
 
-var (
+type serverState struct {
 	currentWord  string
 	revealedWord string
 	guessed      string
@@ -19,10 +19,12 @@ var (
 	curHostIndex int
 	turn         int
 	guessesLeft  int
-	needNewWord  bool = false
-	winner       int  = -1
-	wordCheck, _      = sql.Open("sqlite3", "./words.db")
-)
+	needNewWord  bool
+	winner       int
+	wordCheck    *sql.DB
+}
+
+var sState serverState = serverState{}
 
 func runTicker(timeoutChannel chan bool, inputChannel chan info) {
 	ticker := time.NewTicker(60 * time.Second)
@@ -35,10 +37,10 @@ func runTicker(timeoutChannel chan bool, inputChannel chan info) {
 			timeoutChannel <- true
 			// Send information over the WebSocket connection every 60 seconds
 		case x := <-inputChannel:
-			if len(players) == 0 {
+			if len(sState.players) == 0 {
 				continue
 			}
-			if x.PlayerIndex == turn {
+			if x.PlayerIndex == sState.turn {
 				ticker.Reset(60 * time.Second)
 				fmt.Println("ticker reset")
 			}
@@ -47,46 +49,46 @@ func runTicker(timeoutChannel chan bool, inputChannel chan info) {
 	}
 }
 
-func guess(letter rune, outputChannel chan state) {
-	if needNewWord {
+func guess(letter rune, outputChannel chan clientState) {
+	if sState.needNewWord {
 		return
 	}
-	if !strings.Contains(guessed, string(letter)) {
+	if !strings.Contains(sState.guessed, string(letter)) {
 		good := false
-		guessed += string(letter)
-		for i, char := range currentWord {
+		sState.guessed += string(letter)
+		for i, char := range sState.currentWord {
 			if char == letter {
-				revealedWord = revealedWord[:i] + string(letter) + revealedWord[i+1:]
+				sState.revealedWord = sState.revealedWord[:i] + string(letter) + sState.revealedWord[i+1:]
 				good = true
 			}
 		}
-		changedPartsOfState := state{}
+		changedPartsOfState := clientState{}
 
-		if currentWord == revealedWord {
+		if sState.currentWord == sState.revealedWord {
 			changedPartsOfState.NeedNewWord = true
-			needNewWord = true
-			turn = (curHostIndex + 2) % len(players)
-			curHostIndex = (curHostIndex + 1) % len(players)
-			winner = HOST_LOSES
-			changedPartsOfState.Host, changedPartsOfState.Turn = curHostIndex, turn
-		} else if guessesLeft == 1 && !good {
-			needNewWord = true
-			turn = (curHostIndex + 2) % len(players)
-			winner = HOST_WINS
-			curHostIndex = (curHostIndex + 1) % len(players)
+			sState.needNewWord = true
+			sState.turn = (sState.curHostIndex + 2) % len(sState.players)
+			sState.curHostIndex = (sState.curHostIndex + 1) % len(sState.players)
+			sState.winner = HOST_LOSES
+			changedPartsOfState.Host, changedPartsOfState.Turn = sState.curHostIndex, sState.turn
+		} else if sState.guessesLeft == 1 && !good {
+			sState.needNewWord = true
+			sState.turn = (sState.curHostIndex + 2) % len(sState.players)
+			sState.winner = HOST_WINS
+			sState.curHostIndex = (sState.curHostIndex + 1) % len(sState.players)
 		} else if !good {
-			guessesLeft--
-			turn = (turn + 1) % len(players)
-			if turn == curHostIndex {
-				turn = (turn + 1) % len(players)
+			sState.guessesLeft--
+			sState.turn = (sState.turn + 1) % len(sState.players)
+			if sState.turn == sState.curHostIndex {
+				sState.turn = (sState.turn + 1) % len(sState.players)
 			}
 		}
 		outputChannel <- changedPartsOfState
 	}
 }
 
-func newWord(word string, outputChannel chan state) {
-	x, _ := wordCheck.Query("select word from words where word='" + word + "'")
+func newWord(word string, outputChannel chan clientState) {
+	x, _ := sState.wordCheck.Query("select word from words where word='" + word + "'")
 	result := ""
 	if x.Next() {
 
@@ -98,23 +100,23 @@ func newWord(word string, outputChannel chan state) {
 	} else {
 		return
 	}
-	currentWord = word
-	revealedWord = ""
-	needNewWord = false
-	guessed = ""
-	guessesLeft = 10
-	winner = -1
+	sState.currentWord = word
+	sState.revealedWord = ""
+	sState.needNewWord = false
+	sState.guessed = ""
+	sState.guessesLeft = 6
+	sState.winner = -1
 	for range word {
-		revealedWord += "_"
+		sState.revealedWord += "_"
 	}
-	turn = (turn + 1) % len(players)
-	if turn == curHostIndex {
-		turn = (turn + 1) % len(players)
+	sState.turn = (sState.turn + 1) % len(sState.players)
+	if sState.turn == sState.curHostIndex {
+		sState.turn = (sState.turn + 1) % len(sState.players)
 	}
-	outputChannel <- state{}
+	outputChannel <- clientState{}
 }
 
-func game(inputChannel chan info, timeoutChannel chan bool, outputChannel chan state) {
+func game(inputChannel chan info, timeoutChannel chan bool, outputChannel chan clientState) {
 	tickerTimeoutChannel := make(chan (bool))
 	tickerInputChannel := make(chan (info))
 	go runTicker(tickerTimeoutChannel, tickerInputChannel)
@@ -123,12 +125,12 @@ func game(inputChannel chan info, timeoutChannel chan bool, outputChannel chan s
 		case timeout := <-tickerTimeoutChannel:
 			println("timeout")
 			//timed out, move to the next player
-			if len(players) == 0 {
+			if len(sState.players) == 0 {
 				continue
 			}
-			turn = (turn + 1) % len(players)
-			if curHostIndex == turn {
-				turn = (turn + 1) % len(players)
+			sState.turn = (sState.turn + 1) % len(sState.players)
+			if sState.curHostIndex == sState.turn {
+				sState.turn = (sState.turn + 1) % len(sState.players)
 			}
 			timeoutChannel <- timeout //for the websocket to update everybody
 
@@ -137,21 +139,21 @@ func game(inputChannel chan info, timeoutChannel chan bool, outputChannel chan s
 			//main part of loop
 			// determine from the info object what kind of action that user is gonna take
 			if len(info.Guess) >= 1 {
-				//they guessed a letter that's one character
-				if info.PlayerIndex == turn {
+				//they sState.guessed a letter that's one character
+				if info.PlayerIndex == sState.turn {
 					guess(rune(info.Guess[0]), outputChannel)
 				} else {
-					outputChannel <- state{Warning: "not your turn", PlayerIndex: info.PlayerIndex}
+					outputChannel <- clientState{Warning: "not your turn", PlayerIndex: info.PlayerIndex}
 				}
 			} else if len(info.Word) > 0 { //they are giving us a new word
-				if needNewWord && info.PlayerIndex == curHostIndex {
+				if sState.needNewWord && info.PlayerIndex == sState.curHostIndex {
 					newWord(info.Word, outputChannel)
 				} else {
-					outputChannel <- state{Warning: "you can't pick the word right now", PlayerIndex: info.PlayerIndex}
+					outputChannel <- clientState{Warning: "you can't pick the word right now", PlayerIndex: info.PlayerIndex}
 				}
 			} else if len(info.Username) > 0 {
-				players[info.PlayerIndex] = info.Username
-				outputChannel <- state{Players: players}
+				sState.players[info.PlayerIndex] = info.Username
+				outputChannel <- clientState{}
 			}
 		}
 
