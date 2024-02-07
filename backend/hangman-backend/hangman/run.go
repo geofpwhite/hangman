@@ -1,19 +1,17 @@
 package hangman
 
 import (
-	"database/sql"
 	_ "github.com/mattn/go-sqlite3"
 )
 
-type info struct {
+type inputInfo struct {
 	Username    string `json:"username"`
 	Guess       string `json:"guess"`
 	Word        string `json:"word"`
 	Signup      bool   `json:"signup"`
 	PlayerIndex int    `json:"playerIndex"`
+	GameIndex   int    `json:"gameIndex"`
 }
-
-var db *sql.DB
 
 type clientState struct {
 	Players        []string `json:"players"`
@@ -26,27 +24,20 @@ type clientState struct {
 	Warning        string   `json:"warning"`
 	PlayerIndex    int      `json:"playerIndex"` // changes for each connection that the update state object is sent to
 	Winner         int      `json:"winner"`
+	GameIndex      int      `json:"gameIndex"`
 }
 
 func Run() {
-	sState.currentWord = ""
-	sState.revealedWord = ""
+	gState := newGame()
 
-	defer db.Close()
-	sState.winner = -1
-	wordCheck, _ := sql.Open("sqlite3", "./words.db")
-	sState.wordCheck = wordCheck
-
-	sState.players = make([]string, 0)
-	inputChannel := make(chan (info))
+	gState.players = make([]string, 0)
+	inputChannel := make(chan (inputInfo))
 	outputChannel := make(chan (clientState))
-	timeoutChannel := make(chan (bool))
-	sState.needNewWord = true
-	sState.guessesLeft = 6
-	/* defer close(inputChannel)
-	defer close(outputChannel)
-	defer close(timeoutChannel) */
-	go game(inputChannel, timeoutChannel, outputChannel)
-	// go newView(cliChannel)
-	server(inputChannel, timeoutChannel, outputChannel)
+	timeoutChannel := make(chan (int))
+	newGameChannel := make(chan (bool))
+	// defer close(inputChannel)
+	// defer close(outputChannel)
+	// defer close(timeoutChannel)
+	go game(inputChannel, timeoutChannel, outputChannel, newGameChannel)
+	server(inputChannel, timeoutChannel, outputChannel, newGameChannel)
 }

@@ -20,15 +20,18 @@ const HOST_LOSES = 1
 
 const guessesLeftImages = [GAME_OVER, LEFT1, LEFT2, LEFT3, LEFT4, LEFT5, LEFT6, LEFT7, LEFT8, LEFT9]
 
-interface WebSocketComponentProps { }
+interface HangmanComponentProps {
+  gameIndex: number
+}
 
-const HangmanComponent: React.FC<WebSocketComponentProps> = () => {
+const HangmanComponent: React.FC<HangmanComponentProps> = ({ gameIndex }) => {
   const [webSocket, setWebSocket] = useState<WebSocket | null>(null);
   const [gameState, setGameState] = useState<GameState>();
   const [usernameInputValue, setInputValue] = useState('');
   const [newWordInputValue, setInputValue2] = useState('');
   const letters: string = "abcdefghijklmnopqrstuvwxyz";
   var game = new Game()
+
 
   const drawHangMan = () => {
     if (!gameState) {
@@ -53,7 +56,7 @@ const HangmanComponent: React.FC<WebSocketComponentProps> = () => {
   }
 
   useEffect(() => {
-    const ws = new WebSocket('ws://localhost:8000/ws');
+    const ws = new WebSocket('ws://localhost:8000/ws/' + gameIndex);
 
     ws.onopen = () => {
       console.log('WebSocket connection opened');
@@ -144,13 +147,14 @@ const HangmanComponent: React.FC<WebSocketComponentProps> = () => {
       )
     }
   }
-
+  console.log(gameState)
 
   const NewWordInputBox = () => {
     if (!gameState || !gameState.needNewWord) {
       return (<div></div>)
     }
     if (gameState?.needNewWord && gameState?.host === gameState?.playerIndex) {
+
       return (
         <div>
           <div className="new-word">

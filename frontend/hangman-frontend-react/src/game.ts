@@ -9,6 +9,7 @@ export interface GameState {
     lettersGuessed: string
     guessesLeft: number
     winner: number
+    gameIndex: number
 }
 export class Game {
     state: GameState = {
@@ -21,7 +22,8 @@ export class Game {
         revealedWord: "",
         lettersGuessed: "",
         guessesLeft: -1,
-        winner: -1
+        winner: -1,
+        gameIndex: -1
     }
 
     fromGameState(gs: GameState) {
@@ -48,6 +50,9 @@ export class Game {
         }
         if (gs.playerIndex !== -1) {
             this.state.playerIndex = gs.playerIndex
+        }
+        if (gs.gameIndex !== -1) {
+            this.state.gameIndex = gs.gameIndex
         }
         this.state.winner = gs.winner
     }
