@@ -18,12 +18,15 @@ var upgrader = websocket.Upgrader{
 	},
 }
 
-func (gState *gameState) handleWebSocket(conn *websocket.Conn, inputChannel chan inputInfo, timeoutChannel chan int, outputChannel chan clientState) {
+func (gState *gameState) handleWebSocket(conn *websocket.Conn, inputChannel chan inputInfo, timeoutChannel chan int, outputChannel chan clientState, closeGameChannel chan int) {
 	// first thing to do when we have a new connection is tell them the current game state
 
 	gState.connections = append(gState.connections, conn)
 	playerIndex := len(gState.players)
 	gState.players = append(gState.players, "Player "+strconv.Itoa(playerIndex+1))
+	if playerIndex == 1 {
+		gState.turn = 1
+	}
 	defer func() {
 		if len(gState.players)-1 == playerIndex {
 			gState.players, gState.connections = gState.players[:playerIndex], gState.connections[:playerIndex]
@@ -31,7 +34,11 @@ func (gState *gameState) handleWebSocket(conn *websocket.Conn, inputChannel chan
 			gState.players = append(gState.players[:playerIndex], gState.players[playerIndex+1:]...)
 			gState.connections = append(gState.connections[:playerIndex], gState.connections[playerIndex+1:]...)
 		}
-		outputChannel <- clientState{}
+		if len(gState.connections) == 0 {
+			closeGameChannel <- gState.gameIndex
+		} else {
+			outputChannel <- clientState{GameIndex: gState.gameIndex}
+		}
 	}()
 
 	currentState := clientState{
@@ -93,7 +100,7 @@ func (gState *gameState) handleWebSocket(conn *websocket.Conn, inputChannel chan
 	}
 }
 
-func server(inputChannel chan inputInfo, timeoutChannel chan int, outputChannel chan clientState, newGameChannel chan bool) {
+func server(inputChannel chan inputInfo, timeoutChannel chan int, outputChannel chan clientState, newGameChannel chan bool, closeGameChannel chan int) {
 	r := gin.Default()
 	r.Use(func(c *gin.Context) {
 		c.Writer.Header().Set("Access-Control-Allow-Origin", "*")
@@ -128,7 +135,7 @@ func server(inputChannel chan inputInfo, timeoutChannel chan int, outputChannel 
 		}
 		defer conn.Close()
 
-		gStates[gameIndex].handleWebSocket(conn, inputChannel, timeoutChannel, outputChannel)
+		gStates[gameIndex].handleWebSocket(conn, inputChannel, timeoutChannel, outputChannel, closeGameChannel)
 		// Handle WebSocket connections here
 	})
 	go func() {
@@ -136,25 +143,27 @@ func server(inputChannel chan inputInfo, timeoutChannel chan int, outputChannel 
 			// write changed state to clients
 			select {
 			case s := <-outputChannel:
+
 				gState := &gStates[s.GameIndex]
+
 				fmt.Println(s.GameIndex, " game index")
 				newState := clientState{
-					GameIndex:      gState.gameIndex,
-					Players:        gState.players,
-					Turn:           gState.turn,
-					Host:           gState.curHostIndex,
-					RevealedWord:   gState.revealedWord,
-					GuessesLeft:    gState.guessesLeft,
-					LettersGuessed: gState.guessed,
-					NeedNewWord:    gState.needNewWord,
+					GameIndex:      (*gState).gameIndex,
+					Players:        (*gState).players,
+					Turn:           (*gState).turn,
+					Host:           (*gState).curHostIndex,
+					RevealedWord:   (*gState).revealedWord,
+					GuessesLeft:    (*gState).guessesLeft,
+					LettersGuessed: (*gState).guessed,
+					NeedNewWord:    (*gState).needNewWord,
 					Warning:        "",
-					Winner:         gState.winner,
+					Winner:         (*gState).winner,
 				}
 				if newState.NeedNewWord {
-					newState.RevealedWord = gState.currentWord
+					newState.RevealedWord = (*gState).currentWord
 				}
 				fmt.Println(gState, " gState")
-				for i, c := range gState.connections {
+				for i, c := range (*gState).connections {
 					newState.PlayerIndex = i
 					if i == s.PlayerIndex {
 						newState.Warning = s.Warning
@@ -169,18 +178,18 @@ func server(inputChannel chan inputInfo, timeoutChannel chan int, outputChannel 
 				gState := &gStates[gameIndex]
 				fmt.Println(gameIndex, " game index")
 				newState := clientState{
-					Players:        gState.players,
-					Turn:           gState.turn,
-					Host:           gState.curHostIndex,
-					RevealedWord:   gState.revealedWord,
-					GuessesLeft:    gState.guessesLeft,
-					LettersGuessed: gState.guessed,
-					NeedNewWord:    gState.needNewWord,
-					GameIndex:      gState.gameIndex,
+					Players:        (*gState).players,
+					Turn:           (*gState).turn,
+					Host:           (*gState).curHostIndex,
+					RevealedWord:   (*gState).revealedWord,
+					GuessesLeft:    (*gState).guessesLeft,
+					LettersGuessed: (*gState).guessed,
+					NeedNewWord:    (*gState).needNewWord,
+					GameIndex:      (*gState).gameIndex,
 					Warning:        "timed out",
 				}
 
-				for i, conn := range gState.connections {
+				for i, conn := range (*gState).connections {
 					newState.PlayerIndex = i
 					if err := conn.WriteJSON(newState); err != nil {
 						println(err)

@@ -13,6 +13,7 @@ type inputInfo struct {
 	GameIndex   int    `json:"gameIndex"`
 }
 
+/*  */
 type clientState struct {
 	Players        []string `json:"players"`
 	Turn           int      `json:"turn"`
@@ -28,16 +29,18 @@ type clientState struct {
 }
 
 func Run() {
-	gState := newGame()
-
-	gState.players = make([]string, 0)
+	{ //outside of scope so it can be garbage collected.... I think
+		gState := newGame()
+		gState.players = make([]string, 0)
+	}
 	inputChannel := make(chan (inputInfo))
 	outputChannel := make(chan (clientState))
 	timeoutChannel := make(chan (int))
+	closeGameChannel := make(chan (int))
 	newGameChannel := make(chan (bool))
-	// defer close(inputChannel)
-	// defer close(outputChannel)
-	// defer close(timeoutChannel)
-	go game(inputChannel, timeoutChannel, outputChannel, newGameChannel)
-	server(inputChannel, timeoutChannel, outputChannel, newGameChannel)
+	defer close(inputChannel)
+	defer close(outputChannel)
+	defer close(timeoutChannel)
+	go game(inputChannel, timeoutChannel, outputChannel, newGameChannel, closeGameChannel)
+	server(inputChannel, timeoutChannel, outputChannel, newGameChannel, closeGameChannel)
 }

@@ -17,8 +17,8 @@ import GRATEFUL from "./grateful.jpeg"
 
 const HOST_WINS = 0
 const HOST_LOSES = 1
-
 const guessesLeftImages = [GAME_OVER, LEFT1, LEFT2, LEFT3, LEFT4, LEFT5, LEFT6, LEFT7, LEFT8, LEFT9]
+var game = new Game()
 
 interface HangmanComponentProps {
   gameIndex: number
@@ -29,32 +29,7 @@ const HangmanComponent: React.FC<HangmanComponentProps> = ({ gameIndex }) => {
   const [gameState, setGameState] = useState<GameState>();
   const [usernameInputValue, setInputValue] = useState('');
   const [newWordInputValue, setInputValue2] = useState('');
-  const letters: string = "abcdefghijklmnopqrstuvwxyz";
-  var game = new Game()
-
-
-  const drawHangMan = () => {
-    if (!gameState) {
-      return
-    }
-    if (gameState.guessesLeft >= 10) {
-      return <div style={{ width: "300px", height: "100px" }} />
-    } else if (gameState?.guessesLeft < 10) {
-      if (gameState.needNewWord) {
-        if (gameState.winner === HOST_WINS) {
-
-          return <img src={GAME_OVER} style={{ width: "300px", height: "100px" }} alt="" />
-        } else {
-          return <img src={GRATEFUL} style={{ width: "300px", height: "100px" }} alt="" />
-        }
-      }
-      return (
-        <img src={guessesLeftImages[gameState?.guessesLeft]} style={{ width: "300px", height: "100px" }} alt="" />
-      )
-    }
-
-  }
-
+  const alphabet: string = "abcdefghijklmnopqrstuvwxyz";
   useEffect(() => {
     const ws = new WebSocket('ws://localhost:8000/ws/' + gameIndex);
 
@@ -87,6 +62,30 @@ const HangmanComponent: React.FC<HangmanComponentProps> = ({ gameIndex }) => {
   }, []); // Empty dependency array ensures this effect runs only once
 
 
+  const drawHangMan = () => {
+    if (!gameState) {
+      return
+    }
+    if (gameState.guessesLeft >= 10) {
+      return <div style={{ width: "300px", height: "100px" }} />
+    } else if (gameState?.guessesLeft < 10) {
+      if (gameState.needNewWord) {
+        if (gameState.winner === HOST_WINS) {
+
+          return <img src={GAME_OVER} style={{ width: "300px", height: "100px" }} alt="" />
+        } else {
+          return <img src={GRATEFUL} style={{ width: "300px", height: "100px" }} alt="" />
+        }
+      }
+      return (
+        <img src={guessesLeftImages[gameState?.guessesLeft]} style={{ width: "300px", height: "100px" }} alt="" />
+      )
+    }
+
+  }
+
+
+
   const sendGuess = (letter: string) => {
     webSocket?.send("g:" + letter);
   };
@@ -94,7 +93,7 @@ const HangmanComponent: React.FC<HangmanComponentProps> = ({ gameIndex }) => {
   const sendNewWord = () => {
     let c = newWordInputValue.toLowerCase()
     for (let i = 0; i < newWordInputValue.length; i++) {
-      if (!letters.includes(c[i])) {
+      if (!alphabet.includes(c[i])) {
         //send error, letters only
         return
       }
@@ -140,7 +139,7 @@ const HangmanComponent: React.FC<HangmanComponentProps> = ({ gameIndex }) => {
           {
             gameState.players.map((value: string, id: number) => (
               <div style={{ color: id === gameState.turn ? 'green' : id === gameState.host ? 'red' : 'black' }}>
-                {value}
+                {gameState.host === id ? value + "<- HOST" : value}
               </div>
             ))}
         </div>
@@ -276,6 +275,23 @@ const HangmanComponent: React.FC<HangmanComponentProps> = ({ gameIndex }) => {
     }
   }
 
+  const letterGrid = () => {
+    return (
+      <div className="letter-grid">
+        {alphabet.split("").map((value: string, id: number) => {
+          if (!(gameState?.lettersGuessed.includes(value))) {
+            return (
+              <button type="button" key={id} className="letter-button" onClick={() => sendGuess(value)} >
+                {value}
+              </button>
+            )
+          } else {
+            return (<div />)
+          }
+        })}
+      </div>
+    )
+  }
 
 
   return (
@@ -306,30 +322,36 @@ const HangmanComponent: React.FC<HangmanComponentProps> = ({ gameIndex }) => {
         <p>
           Letters Guessed
         </p>
-        <p id="letters-guessed">
-          {gameState?.lettersGuessed}
-        </p>
+
+
+        {
+          gameState?.lettersGuessed.split("").map((letter: string, id: number) => {
+            return (
+              <span id="letters-guessed" style={{ color: determineColor(letter) }}>
+                {letter}
+              </span>
+            )
+          })
+        }
+      </div>
+      <div className="playerNames">
+        {
+          PlayerNames()
+        }
+      </div>
+      <div className="usernameInputBox">
+        {
+          usernameInputBox()
+        }
+      </div>
+      <div className="newWordInputBox">
+        {
+          gameState?.needNewWord ? NewWordInputBox() : (<div />)
+        }
       </div>
       {
-        PlayerNames()
+        letterGrid()
       }
-
-      {
-        usernameInputBox()
-      }
-
-      {
-        gameState?.needNewWord ? NewWordInputBox() : (<div />)
-      }
-      <div className="letter-grid">
-        {letters.split("").map((value: string, id: number) => (
-          // <div className="letter-item" style={{ color: determineColor(value), backgroundColor: "transparent" }}>
-          <button type="button" key={id} className="letter-button" onClick={() => sendGuess(value)} style={{ color: determineColor(value) }}>
-            {value}
-          </button>
-          // </div>
-        ))}
-      </div>
     </div>
   );
 };

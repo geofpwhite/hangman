@@ -55,7 +55,7 @@ function App() {
             <div>{needToSelectGame()}
               <button onClick={() => {
                 sendNewGame()
-                setGameChoice(games - 1)
+                setGameChoice(games)
               }}>New Game</button>
             </div>
           )
