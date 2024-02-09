@@ -1,6 +1,8 @@
 package hangman
 
 import (
+	"database/sql"
+
 	_ "github.com/mattn/go-sqlite3"
 )
 
@@ -31,16 +33,18 @@ type clientState struct {
 func Run() {
 	{ //outside of scope so it can be garbage collected.... I think
 		gState := newGame()
-		gState.players = make([]string, 0)
+		gState.players = make([]player, 0)
 	}
 	inputChannel := make(chan (inputInfo))
 	outputChannel := make(chan (clientState))
 	timeoutChannel := make(chan (int))
 	closeGameChannel := make(chan (int))
 	newGameChannel := make(chan (bool))
+	removePlayerChannel := make(chan [2]int)
+	wordCheck, _ = sql.Open("sqlite3", "./words.db")
 	defer close(inputChannel)
 	defer close(outputChannel)
 	defer close(timeoutChannel)
-	go game(inputChannel, timeoutChannel, outputChannel, newGameChannel, closeGameChannel)
-	server(inputChannel, timeoutChannel, outputChannel, newGameChannel, closeGameChannel)
+	go game(inputChannel, timeoutChannel, outputChannel, newGameChannel, closeGameChannel, removePlayerChannel)
+	server(inputChannel, timeoutChannel, outputChannel, newGameChannel, closeGameChannel, removePlayerChannel)
 }

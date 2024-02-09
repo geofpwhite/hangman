@@ -3,6 +3,7 @@ package hangman
 import (
 	"database/sql"
 	"fmt"
+	"slices"
 	"strings"
 	"time"
 
@@ -10,23 +11,29 @@ import (
 	_ "github.com/mattn/go-sqlite3"
 )
 
-const HOST_WINS = 0
-const HOST_LOSES = 1
+const HOST_WINS = 1
+const HOST_LOSES = 2
+
+type player struct {
+	username   string
+	connection *websocket.Conn
+}
 
 type gameState struct {
 	currentWord  string
 	revealedWord string
 	guessed      string
-	players      []string
+	players      []player
 	curHostIndex int
 	turn         int
 	guessesLeft  int
 	needNewWord  bool
 	winner       int
-	wordCheck    *sql.DB
 	gameIndex    int
-	connections  []*websocket.Conn
+	// connections  []*websocket.Conn
 }
+
+var wordCheck *sql.DB
 
 // var gState serverState = serverState{}
 var gStates []*gameState = []*gameState{}
@@ -34,6 +41,7 @@ var gStates []*gameState = []*gameState{}
 func (gState *gameState) runTicker(timeoutChannel chan int, inputChannel chan inputInfo) {
 	ticker := time.NewTicker(60 * time.Second)
 	defer ticker.Stop()
+	defer close(timeoutChannel)
 
 	for {
 		select {
@@ -93,7 +101,7 @@ func (gState *gameState) guess(letter rune, outputChannel chan clientState) {
 }
 
 func (gState *gameState) newWord(word string, outputChannel chan clientState) {
-	x, _ := (*gState).wordCheck.Query("select word from words where word='" + word + "'")
+	x, _ := wordCheck.Query("select word from words where word='" + word + "'")
 	fmt.Println(x)
 	result := ""
 	if x.Next() {
@@ -115,54 +123,88 @@ func (gState *gameState) newWord(word string, outputChannel chan clientState) {
 	for range word {
 		(*gState).revealedWord += "_"
 	}
-	(*gState).turn = ((*gState).turn + 1) % len((*gState).players)
-	if (*gState).turn == (*gState).curHostIndex {
-		(*gState).turn = ((*gState).turn + 1) % len((*gState).players)
-	}
+	(*gState).turn = ((*gState).curHostIndex + 1) % len((*gState).players)
 	outputChannel <- clientState{GameIndex: (*gState).gameIndex}
 }
 
 func newGame() *gameState {
 	gState := new(gameState)
 
-	(*gState).currentWord = ""
-	(*gState).revealedWord = ""
+	gState.currentWord = ""
+	gState.revealedWord = ""
 
-	(*gState).winner = -1
-	wordCheck, _ := sql.Open("sqlite3", "./words.db")
-	(*gState).wordCheck = wordCheck
-	(*gState).needNewWord = true
-	(*gState).guessesLeft = 6
-	(*gState).players = make([]string, 0)
-	(*gState).gameIndex = len(gStates)
+	gState.winner = -1
+	gState.needNewWord = true
+	gState.guessesLeft = 6
+	gState.players = make([]player, 0)
+	gState.gameIndex = len(gStates)
 	gStates = append(gStates, gState)
 	return gState
 }
 
 func (gState *gameState) closeGame() {
-	for i := range gStates[(*gState).gameIndex+1:] {
-		gStates[i+(*gState).gameIndex+1].gameIndex--
+	fmt.Println("closing game")
+	for _, gs := range gStates {
+
+		fmt.Println(gs)
 	}
-	gStates = append(gStates[:(*gState).gameIndex], gStates[(*gState).gameIndex+1:]...)
+	for i := range gStates[gState.gameIndex+1:] {
+		gStates[i+gState.gameIndex+1].gameIndex--
+	}
+	gStates = append(gStates[:gState.gameIndex], gStates[gState.gameIndex+1:]...)
 
 }
 
-func game(inputChannel chan inputInfo, timeoutChannel chan int, outputChannel chan clientState, newGameChannel chan bool, closeGameChannel chan int) {
+func game(
+	inputChannel chan inputInfo,
+	timeoutChannel chan int,
+	outputChannel chan clientState,
+	newGameChannel chan bool,
+	closeGameChannel chan int,
+	removePlayerChannel chan [2]int,
+) {
 	tickerInputChannels := []chan inputInfo{}
 	tickerTimeoutChannel := make(chan (int))
-	tickerInputChannel := make(chan (inputInfo))
-	tickerInputChannels = append(tickerInputChannels, tickerInputChannel)
-	go gStates[0].runTicker(tickerTimeoutChannel, tickerInputChannel)
+	{
+		tickerInputChannel := make(chan (inputInfo))
+		tickerInputChannels = append(tickerInputChannels, tickerInputChannel)
+	}
+	go gStates[0].runTicker(tickerTimeoutChannel, tickerInputChannels[0])
 	for {
 		select {
+		case removePlayer := <-removePlayerChannel:
+			gState := gStates[removePlayer[0]]
+			playerIndex := removePlayer[1]
+			fmt.Println("Removing ", gState.players[playerIndex], ", they are index number ", playerIndex)
+			println(len(gState.players))
+			gState.players = slices.Delete(gState.players, playerIndex, playerIndex+1)
+			println(len(gState.players))
+
+			if len(gState.players) == 0 {
+				// closeGameChannel <- gState.gameIndex
+				gState.closeGame()
+			} else {
+				// outputChannel <- clientState{GameIndex: gState.gameIndex}
+				gState.turn = gState.turn % len(gState.players)
+				gState.curHostIndex = gState.curHostIndex % len(gState.players)
+				if gState.needNewWord && gState.curHostIndex != gState.turn {
+					gState.turn = gState.curHostIndex
+				} else if !gState.needNewWord && gState.curHostIndex == gState.turn {
+					gState.turn = (gState.turn + 1) % len(gState.players)
+				}
+				outputChannel <- clientState{GameIndex: gState.gameIndex}
+			}
 
 		case gameIndex := <-closeGameChannel:
+			gStates[gameIndex].gameIndex = gameIndex
 			gStates[gameIndex].closeGame()
+			println("game closed")
 			tickerInputChannels[gameIndex] <- inputInfo{GameIndex: -1}
 			tickerInputChannels = append(tickerInputChannels[:gameIndex], tickerInputChannels[gameIndex+1:]...)
 
 		case <-newGameChannel:
 			gState := newGame()
+			println("newgame")
 			newTickerInputChannel := make(chan (inputInfo))
 			tickerInputChannels = append(tickerInputChannels, newTickerInputChannel)
 			go (*gState).runTicker(tickerTimeoutChannel, newTickerInputChannel)
@@ -171,22 +213,31 @@ func game(inputChannel chan inputInfo, timeoutChannel chan int, outputChannel ch
 			if gameIndex >= len(gStates) {
 				closeGameChannel <- gameIndex
 			}
-			gState := &gStates[gameIndex]
+			gState := gStates[gameIndex]
 			println("timeout")
 			//timed out, move to the next player
-			if len((*gState).players) == 0 {
-				continue
+			if len((*gState).players) <= 1 {
+				closeGameChannel <- gameIndex
 			}
-			(*gState).turn = ((*gState).turn + 1) % len((*gState).players)
-			if (*gState).curHostIndex == (*gState).turn {
+			if gState.needNewWord {
+				gState.curHostIndex = (gState.curHostIndex + 1) % len(gState.players)
+				gState.turn = gState.curHostIndex
+			} else {
+
 				(*gState).turn = ((*gState).turn + 1) % len((*gState).players)
+				if (*gState).curHostIndex == (*gState).turn {
+					(*gState).turn = ((*gState).turn + 1) % len((*gState).players)
+				}
 			}
 			timeoutChannel <- gameIndex //for the websocket to update everybody
 
 		case info := <-inputChannel:
 			gState := &gStates[info.GameIndex]
 			fmt.Println(info)
-			fmt.Println(gState)
+			for _, gs := range gStates {
+
+				fmt.Println(gs)
+			}
 			tickerInputChannels[info.GameIndex] <- info //for the ticker to handle
 			//main part of loop
 			// determine from the info object what kind of action that user is gonna take
@@ -210,9 +261,10 @@ func game(inputChannel chan inputInfo, timeoutChannel chan int, outputChannel ch
 					outputChannel <- clientState{Warning: "you can't pick the word right now", PlayerIndex: info.PlayerIndex}
 				}
 			} else if len(info.Username) > 0 {
-				(*gState).players[info.PlayerIndex] = info.Username
+				(*gState).players[info.PlayerIndex].username = info.Username
 				outputChannel <- clientState{}
 			}
+
 		}
 
 	}

@@ -15,8 +15,8 @@ import GRATEFUL from "./grateful.jpeg"
 
 
 
-const HOST_WINS = 0
-const HOST_LOSES = 1
+const HOST_WINS = 1
+const HOST_LOSES = 2
 const guessesLeftImages = [GAME_OVER, LEFT1, LEFT2, LEFT3, LEFT4, LEFT5, LEFT6, LEFT7, LEFT8, LEFT9]
 var game = new Game()
 
@@ -189,7 +189,18 @@ const HangmanComponent: React.FC<HangmanComponentProps> = ({ gameIndex }) => {
     }
 
     let turnText
-    if (turn) {
+    if (gameState?.needNewWord) {
+      if (!host) {
+        turnText = (
+          <div>
+            <h2>
+              waiting for the host
+            </h2>
+          </div>
+        )
+      }
+
+    } else if (turn) {
       turnText = (
         <div>
           <h2>
@@ -258,6 +269,17 @@ const HangmanComponent: React.FC<HangmanComponentProps> = ({ gameIndex }) => {
   const determineGuessOrCongrats = () => {
 
     if (gameState?.needNewWord) {
+      if (gameState.winner === HOST_LOSES) {
+        return gameState.players[gameState.host + gameState.players.length - 1 % gameState.players.length] + "'s word was guessed "
+      } else if (gameState.winner === HOST_WINS) {
+        let previousHost = gameState.host
+        if (previousHost === 0) {
+          previousHost = gameState.players.length - 1
+        } else {
+          previousHost--
+        }
+        return gameState.players[previousHost] + " won"
+      }
 
       if (gameState.winner === HOST_WINS && gameState.playerIndex === gameState.host - 1) {
         return "You Won"
@@ -320,19 +342,18 @@ const HangmanComponent: React.FC<HangmanComponentProps> = ({ gameIndex }) => {
 
       <div className="lettersGuessed">
         <p>
-          Letters Guessed
+
+
+          {
+            gameState?.lettersGuessed.split("").map((letter: string, id: number) => {
+              return (
+                <span id="letters-guessed" style={{ color: determineColor(letter) }}>
+                  {letter}
+                </span>
+              )
+            })
+          }
         </p>
-
-
-        {
-          gameState?.lettersGuessed.split("").map((letter: string, id: number) => {
-            return (
-              <span id="letters-guessed" style={{ color: determineColor(letter) }}>
-                {letter}
-              </span>
-            )
-          })
-        }
       </div>
       <div className="playerNames">
         {

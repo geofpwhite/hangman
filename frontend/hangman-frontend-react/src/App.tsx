@@ -27,6 +27,8 @@ function App() {
       response.json().then((obj: { length: number }) => {
         setGames(obj.length)
       })
+    }).then(() => {
+      setGameChoice(games)
     })
   }
   const selectGame = (index: number) => {
@@ -55,7 +57,6 @@ function App() {
             <div>{needToSelectGame()}
               <button onClick={() => {
                 sendNewGame()
-                setGameChoice(games)
               }}>New Game</button>
             </div>
           )
