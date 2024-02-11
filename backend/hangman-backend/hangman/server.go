@@ -39,9 +39,8 @@ func (gState *gameState) handleWebSocket(
 		gState.turn = 1
 	}
 	defer func() {
-		removePlayerChannel <- [2]int{gState.gameIndex, slices.Index(gState.players, newPlayer)}
+		// removePlayerChannel <- [2]int{gState.gameIndex, slices.Index(gState.players, newPlayer)}
 		conn.Close()
-		fmt.Println("ASDFASDFASDFASDFASDFASDFASDFFFFFFFFFFFFFFF")
 	}()
 	usernames := []string{}
 	for _, p := range gState.players {
@@ -61,7 +60,6 @@ func (gState *gameState) handleWebSocket(
 		Winner:         gState.winner,
 		GameIndex:      gState.gameIndex,
 	}
-	fmt.Println(currentState)
 	for i, player := range gState.players {
 		currentState.PlayerIndex = i
 		player.connection.WriteJSON(currentState)
@@ -69,14 +67,24 @@ func (gState *gameState) handleWebSocket(
 
 	for {
 		messageType, p, err := conn.ReadMessage()
-		i := inputInfo{
-			GameIndex:   gState.gameIndex,
-			PlayerIndex: playerIndex,
-			Username:    "",
-			Guess:       "",
-			Word:        "",
+		if err != nil {
+			index := slices.Index(gState.players, newPlayer)
+			if index == -1 {
+
+				return
+			}
+			removePlayerChannel <- [2]int{gState.gameIndex}
+			return
 		}
-		fmt.Println(string(p))
+		i := inputInfo{
+			GameIndex: gState.gameIndex,
+			PlayerIndex: slices.IndexFunc(gState.players, func(p player) bool {
+				return p.connection == conn
+			}),
+			Username: "",
+			Guess:    "",
+			Word:     "",
+		}
 		if err != nil {
 			fmt.Println(err)
 			return
@@ -137,9 +145,6 @@ func server(inputChannel chan inputInfo, timeoutChannel chan int, outputChannel 
 			log.Println(err)
 			return
 		}
-		for _, gs := range gStates {
-			fmt.Println(gs, "gState")
-		}
 
 		gStates[gameIndex].handleWebSocket(conn, inputChannel, timeoutChannel, outputChannel, closeGameChannel, removePlayerChannel)
 		// Handle WebSocket connections here
@@ -159,7 +164,6 @@ func server(inputChannel chan inputInfo, timeoutChannel chan int, outputChannel 
 					usernames = append(usernames, p.username)
 				}
 
-				fmt.Println(s.GameIndex, " game index")
 				newState := clientState{
 					GameIndex:      (*gState).gameIndex,
 					Players:        usernames,
@@ -188,7 +192,6 @@ func server(inputChannel chan inputInfo, timeoutChannel chan int, outputChannel 
 				}
 			case gameIndex := <-timeoutChannel:
 				gState := &gStates[gameIndex]
-				fmt.Println(gameIndex, " game index")
 				usernames := []string{}
 				for _, p := range (*gState).players {
 					usernames = append(usernames, p.username)

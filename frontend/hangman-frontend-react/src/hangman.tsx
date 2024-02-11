@@ -40,6 +40,7 @@ const HangmanComponent: React.FC<HangmanComponentProps> = ({ gameIndex }) => {
     ws.onmessage = (event) => {
       try {
         let obj = JSON.parse(event.data);
+        let x = { ...obj };
         setGameState(() => {
           // Update the state based on the previous state
           game.fromGameState(obj);
@@ -315,6 +316,21 @@ const HangmanComponent: React.FC<HangmanComponentProps> = ({ gameIndex }) => {
     )
   }
 
+  const lettersGuessed = () => {
+    return (
+      <p>
+        {
+          gameState?.lettersGuessed.split("").map((letter: string, id: number) => {
+            return (
+              <span id="letters-guessed" style={{ color: determineColor(letter) }}>
+                {letter}
+              </span>
+            )
+          })
+        }
+      </p>
+    )
+  }
 
   return (
     <div>
@@ -341,19 +357,9 @@ const HangmanComponent: React.FC<HangmanComponentProps> = ({ gameIndex }) => {
       </div>
 
       <div className="lettersGuessed">
-        <p>
-
-
-          {
-            gameState?.lettersGuessed.split("").map((letter: string, id: number) => {
-              return (
-                <span id="letters-guessed" style={{ color: determineColor(letter) }}>
-                  {letter}
-                </span>
-              )
-            })
-          }
-        </p>
+        {
+          lettersGuessed()
+        }
       </div>
       <div className="playerNames">
         {

@@ -54,10 +54,15 @@ function App() {
       {
         gameChoice === -1 ?
           (
-            <div>{needToSelectGame()}
-              <button onClick={() => {
-                sendNewGame()
-              }}>New Game</button>
+            <div style={{ padding: '30%' }}>
+              <div>
+                {needToSelectGame()}
+              </div>
+              <div>
+                <button onClick={() => {
+                  sendNewGame()
+                }}>New Game</button>
+              </div>
             </div>
           )
           : selectGame(gameChoice)

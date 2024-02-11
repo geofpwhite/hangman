@@ -20,6 +20,7 @@ type player struct {
 }
 
 type gameState struct {
+	wordCheck    *sql.DB
 	currentWord  string
 	revealedWord string
 	guessed      string
@@ -41,21 +42,19 @@ var gStates []*gameState = []*gameState{}
 func (gState *gameState) runTicker(timeoutChannel chan int, inputChannel chan inputInfo) {
 	ticker := time.NewTicker(60 * time.Second)
 	defer ticker.Stop()
-	defer close(timeoutChannel)
 
 	for {
 		select {
-		case tick := <-ticker.C:
-			fmt.Println(tick)
+		case <-ticker.C:
+
 			timeoutChannel <- (*gState).gameIndex
 			// Send information over the WebSocket connection every 60 seconds
 		case x := <-inputChannel:
-			if len((*gState).players) == 0 {
-				continue
+			if len((*gState).players) == 0 || x.PlayerIndex == -1 {
+				return
 			}
 			if x.PlayerIndex == (*gState).turn {
 				ticker.Reset(60 * time.Second)
-				fmt.Println("ticker reset")
 			}
 			// ticker = time.NewTicker(1 * time.Second)
 		}
@@ -101,13 +100,11 @@ func (gState *gameState) guess(letter rune, outputChannel chan clientState) {
 }
 
 func (gState *gameState) newWord(word string, outputChannel chan clientState) {
-	x, _ := wordCheck.Query("select word from words where word='" + word + "'")
-	fmt.Println(x)
+	x, _ := gState.wordCheck.Query("select word from words where word='" + word + "'")
 	result := ""
 	if x.Next() {
 
 		x.Scan(&result)
-		fmt.Println(result, " result")
 		if result == "" {
 			return
 		}
@@ -129,6 +126,7 @@ func (gState *gameState) newWord(word string, outputChannel chan clientState) {
 
 func newGame() *gameState {
 	gState := new(gameState)
+	gState.wordCheck, _ = sql.Open("sqlite3", "./words.db")
 
 	gState.currentWord = ""
 	gState.revealedWord = ""
@@ -143,15 +141,11 @@ func newGame() *gameState {
 }
 
 func (gState *gameState) closeGame() {
-	fmt.Println("closing game")
-	for _, gs := range gStates {
-
-		fmt.Println(gs)
-	}
 	for i := range gStates[gState.gameIndex+1:] {
 		gStates[i+gState.gameIndex+1].gameIndex--
 	}
-	gStates = append(gStates[:gState.gameIndex], gStates[gState.gameIndex+1:]...)
+
+	gStates = slices.Delete(gStates, gState.gameIndex, gState.gameIndex+1)
 
 }
 
@@ -175,14 +169,17 @@ func game(
 		case removePlayer := <-removePlayerChannel:
 			gState := gStates[removePlayer[0]]
 			playerIndex := removePlayer[1]
-			fmt.Println("Removing ", gState.players[playerIndex], ", they are index number ", playerIndex)
-			println(len(gState.players))
+			// fmt.Println("Removing ", gState.players[playerIndex], ", they are index number ", playerIndex)
+			// println(len(gState.players))
 			gState.players = slices.Delete(gState.players, playerIndex, playerIndex+1)
-			println(len(gState.players))
+			// println(len(gState.players))
 
 			if len(gState.players) == 0 {
 				// closeGameChannel <- gState.gameIndex
 				gState.closeGame()
+				tickerInputChannels[gState.gameIndex] <- inputInfo{GameIndex: -1}
+				close(tickerInputChannels[gState.gameIndex])
+				tickerInputChannels = slices.Delete(tickerInputChannels, gState.gameIndex, gState.gameIndex+1)
 			} else {
 				// outputChannel <- clientState{GameIndex: gState.gameIndex}
 				gState.turn = gState.turn % len(gState.players)
@@ -200,7 +197,8 @@ func game(
 			gStates[gameIndex].closeGame()
 			println("game closed")
 			tickerInputChannels[gameIndex] <- inputInfo{GameIndex: -1}
-			tickerInputChannels = append(tickerInputChannels[:gameIndex], tickerInputChannels[gameIndex+1:]...)
+			close(tickerInputChannels[gameIndex])
+			tickerInputChannels = slices.Delete(tickerInputChannels, gameIndex, gameIndex+1)
 
 		case <-newGameChannel:
 			gState := newGame()
@@ -234,10 +232,6 @@ func game(
 		case info := <-inputChannel:
 			gState := &gStates[info.GameIndex]
 			fmt.Println(info)
-			for _, gs := range gStates {
-
-				fmt.Println(gs)
-			}
 			tickerInputChannels[info.GameIndex] <- info //for the ticker to handle
 			//main part of loop
 			// determine from the info object what kind of action that user is gonna take
@@ -252,8 +246,6 @@ func game(
 			} else if len(info.Word) > 0 { //they are giving us a new word
 
 				fmt.Println("word")
-				fmt.Println(info.Word)
-				fmt.Println((*gState).needNewWord, info.PlayerIndex, (*gState).curHostIndex)
 
 				if (*gState).needNewWord && info.PlayerIndex == (*gState).curHostIndex {
 					(*gState).newWord(info.Word, outputChannel)
