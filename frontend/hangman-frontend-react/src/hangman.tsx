@@ -271,7 +271,7 @@ const HangmanComponent: React.FC<HangmanComponentProps> = ({ gameIndex }) => {
 
     if (gameState?.needNewWord) {
       if (gameState.winner === HOST_LOSES) {
-        return gameState.players[gameState.host + gameState.players.length - 1 % gameState.players.length] + "'s word was guessed "
+        return gameState.players[(gameState.host + gameState.players.length - 1) % gameState.players.length] + "'s word was guessed "
       } else if (gameState.winner === HOST_WINS) {
         let previousHost = gameState.host
         if (previousHost === 0) {
