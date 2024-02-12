@@ -1,8 +1,6 @@
 package hangman
 
 import (
-	"database/sql"
-
 	_ "github.com/mattn/go-sqlite3"
 )
 
@@ -41,10 +39,11 @@ func Run() {
 	closeGameChannel := make(chan (int))
 	newGameChannel := make(chan (bool))
 	removePlayerChannel := make(chan [2]int)
-	wordCheck, _ = sql.Open("sqlite3", "./words.db")
 	// defer close(inputChannel)
 	// defer close(outputChannel)
 	// defer close(timeoutChannel)
-	go server(inputChannel, timeoutChannel, outputChannel, newGameChannel, closeGameChannel, removePlayerChannel)
-	game(inputChannel, timeoutChannel, outputChannel, newGameChannel, closeGameChannel, removePlayerChannel)
+	go game(inputChannel, timeoutChannel, outputChannel, newGameChannel, closeGameChannel, removePlayerChannel)
+	server(inputChannel, timeoutChannel, outputChannel, newGameChannel, closeGameChannel, removePlayerChannel)
 }
+
+//func test(inputChannel, timeoutChannel, outputChannel, newGameChannel, closeGameChannel, removePlayerChannel)

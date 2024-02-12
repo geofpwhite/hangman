@@ -73,7 +73,7 @@ func (gState *gameState) handleWebSocket(
 
 				return
 			}
-			removePlayerChannel <- [2]int{gState.gameIndex}
+			removePlayerChannel <- [2]int{gState.gameIndex, index}
 			return
 		}
 		i := inputInfo{
@@ -140,6 +140,9 @@ func server(inputChannel chan inputInfo, timeoutChannel chan int, outputChannel 
 			return
 		}
 		gameIndex, err := strconv.Atoi(str)
+		if err != nil {
+			return
+		}
 		conn, err := upgrader.Upgrade(c.Writer, c.Request, nil)
 		if err != nil {
 			log.Println(err)
