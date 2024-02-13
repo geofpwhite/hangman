@@ -8,7 +8,6 @@ type inputInfo struct {
 	Username    string `json:"username"`
 	Guess       string `json:"guess"`
 	Word        string `json:"word"`
-	Signup      bool   `json:"signup"`
 	PlayerIndex int    `json:"playerIndex"`
 	GameIndex   int    `json:"gameIndex"`
 }
@@ -33,7 +32,7 @@ func Run() {
 		gState := newGame()
 		gState.players = make([]player, 0)
 	}
-	inputChannel := make(chan (inputInfo))
+	inputChannel := make(chan (input))
 	outputChannel := make(chan (clientState))
 	timeoutChannel := make(chan (int))
 	closeGameChannel := make(chan (int))

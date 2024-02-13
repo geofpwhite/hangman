@@ -23,7 +23,7 @@ var upgrader = websocket.Upgrader{
 
 func (gState *gameState) handleWebSocket(
 	conn *websocket.Conn,
-	inputChannel chan inputInfo,
+	inputChannel chan input,
 	timeoutChannel chan int,
 	outputChannel chan clientState,
 	closeGameChannel chan int,
@@ -31,6 +31,7 @@ func (gState *gameState) handleWebSocket(
 ) {
 	// first thing to do when we have a new connection is tell them the current game state
 
+	gState.mut.Lock()
 	playerIndex := len(gState.players)
 	newPlayer := player{username: "Player " + strconv.Itoa(playerIndex+1), connection: conn}
 	gState.players = append(gState.players, newPlayer)
@@ -64,6 +65,7 @@ func (gState *gameState) handleWebSocket(
 		currentState.PlayerIndex = i
 		player.connection.WriteJSON(currentState)
 	}
+	gState.mut.Unlock()
 
 	for {
 		messageType, p, err := conn.ReadMessage()
@@ -81,9 +83,6 @@ func (gState *gameState) handleWebSocket(
 			PlayerIndex: slices.IndexFunc(gState.players, func(p player) bool {
 				return p.connection == conn
 			}),
-			Username: "",
-			Guess:    "",
-			Word:     "",
 		}
 		if err != nil {
 			fmt.Println(err)
@@ -98,22 +97,28 @@ func (gState *gameState) handleWebSocket(
 			switch pString[:2] {
 			case "g:":
 				i.Guess = pString[2:]
+				inp := guessInput{GameIndex: i.GameIndex, PlayerIndex: i.PlayerIndex, Guess: i.Guess}
+				inputChannel <- &inp
 			case "u:":
 				i.Username = pString[2:]
+				inp := usernameInput{GameIndex: i.GameIndex, PlayerIndex: i.PlayerIndex, Username: i.Username}
+				inputChannel <- &inp
 			case "w:":
 				i.Word = pString[2:]
+				inp := newWordInput{GameIndex: i.GameIndex, PlayerIndex: i.PlayerIndex, NewWord: i.Word}
+				inputChannel <- &inp
 			default:
 				continue
 			}
 
-			inputChannel <- i
+			// inputChannel <- i
 			// send what the user wants to do to input channel for game function to handle
 		}
 
 	}
 }
 
-func server(inputChannel chan inputInfo, timeoutChannel chan int, outputChannel chan clientState, newGameChannel chan bool, closeGameChannel chan int, removePlayerChannel chan [2]int) {
+func server(inputChannel chan input, timeoutChannel chan int, outputChannel chan clientState, newGameChannel chan bool, closeGameChannel chan int, removePlayerChannel chan [2]int) {
 	r := gin.Default()
 	r.Use(func(c *gin.Context) {
 		c.Writer.Header().Set("Access-Control-Allow-Origin", "*")
@@ -216,12 +221,11 @@ func server(inputChannel chan inputInfo, timeoutChannel chan int, outputChannel 
 					newState.PlayerIndex = i
 					if err := player.connection.WriteJSON(newState); err != nil {
 						println(err)
-
 					}
 				}
 			}
 		}
 	}()
 	gin.SetMode(gin.ReleaseMode)
-	r.Run("localhost:8000") // listen and serve on 0.0.0.0:8080 (for windows "localhost:8080")
+	r.Run("localhost:8080") // listen and serve on 0.0.0.0:8080 (for windows "localhost:8080")
 }
