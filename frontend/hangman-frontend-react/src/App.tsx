@@ -8,7 +8,7 @@ import axios from 'axios'
 
 
 function App() {
-  const url = "http://localhost:8000"
+  const url = "http://localhost:8080"
 
   const [gameChoice, setGameChoice] = useState<number>(-1)
   const [games, setGames] = useState<number>(-1)
@@ -42,14 +42,13 @@ function App() {
   const needToSelectGame = () => {
     let ary = []
     for (let i = 0; i < games; i++) {
-      ary.push((<button onClick={() => { setGameChoice(i) }}>Join Game</button>))
+      ary.push((<div><button onClick={() => { setGameChoice(i) }}>Join Game</button></div>))
     }
     return ary
   }
 
 
   return (
-
     <div className="App">
       {
         gameChoice === -1 ?
@@ -66,7 +65,6 @@ function App() {
             </div>
           )
           : selectGame(gameChoice)
-
       }
     </div>
   );

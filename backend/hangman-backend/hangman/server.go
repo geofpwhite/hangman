@@ -31,16 +31,11 @@ func (gState *gameState) handleWebSocket(
 ) {
 	// first thing to do when we have a new connection is tell them the current game state
 
-	gState.mut.Lock()
 	playerIndex := len(gState.players)
 	newPlayer := player{username: "Player " + strconv.Itoa(playerIndex+1), connection: conn}
-	gState.players = append(gState.players, newPlayer)
+	gState.newPlayer(newPlayer)
 	// gState.connections = append(gState.connections, conn)
-	if playerIndex == 1 && !gState.needNewWord {
-		gState.turn = 1
-	}
 	defer func() {
-		// removePlayerChannel <- [2]int{gState.gameIndex, slices.Index(gState.players, newPlayer)}
 		conn.Close()
 	}()
 	usernames := []string{}
@@ -65,14 +60,12 @@ func (gState *gameState) handleWebSocket(
 		currentState.PlayerIndex = i
 		player.connection.WriteJSON(currentState)
 	}
-	gState.mut.Unlock()
 
 	for {
 		messageType, p, err := conn.ReadMessage()
 		if err != nil {
 			index := slices.Index(gState.players, newPlayer)
 			if index == -1 {
-
 				return
 			}
 			removePlayerChannel <- [2]int{gState.gameIndex, index}
@@ -91,9 +84,6 @@ func (gState *gameState) handleWebSocket(
 		switch messageType {
 		case websocket.TextMessage:
 			pString := string(p)
-			if err != nil {
-				continue
-			}
 			switch pString[:2] {
 			case "g:":
 				i.Guess = pString[2:]
@@ -131,12 +121,10 @@ func server(inputChannel chan input, timeoutChannel chan int, outputChannel chan
 
 	})
 	r.GET("/new_game", func(c *gin.Context) {
-		fmt.Println("newgame")
 		newGameChannel <- true
 		c.JSON(200, struct{ length int }{length: len(gStates)})
 	})
 	r.GET("/get_games", func(c *gin.Context) {
-		fmt.Println("games got")
 		c.String(http.StatusOK, strconv.Itoa(len(gStates)))
 	})
 	r.GET("/ws/:gameIndex", func(c *gin.Context) {
@@ -148,12 +136,16 @@ func server(inputChannel chan input, timeoutChannel chan int, outputChannel chan
 		if err != nil {
 			return
 		}
+		if gameIndex >= len(gStates) {
+			c.String(http.StatusOK, strconv.Itoa(len(gStates)))
+			return
+		}
 		conn, err := upgrader.Upgrade(c.Writer, c.Request, nil)
 		if err != nil {
 			log.Println(err)
+			conn.Close()
 			return
 		}
-
 		gStates[gameIndex].handleWebSocket(conn, inputChannel, timeoutChannel, outputChannel, closeGameChannel, removePlayerChannel)
 		// Handle WebSocket connections here
 	})
@@ -162,7 +154,8 @@ func server(inputChannel chan input, timeoutChannel chan int, outputChannel chan
 			// write changed state to clients
 			select {
 			case s := <-outputChannel:
-				if s.GameIndex > len(gStates) {
+				println("outputChannel")
+				if s.GameIndex >= len(gStates) {
 					continue
 				}
 				gState := &gStates[s.GameIndex]
@@ -171,7 +164,6 @@ func server(inputChannel chan input, timeoutChannel chan int, outputChannel chan
 				for _, p := range (*gState).players {
 					usernames = append(usernames, p.username)
 				}
-
 				newState := clientState{
 					GameIndex:      (*gState).gameIndex,
 					Players:        usernames,
@@ -199,6 +191,7 @@ func server(inputChannel chan input, timeoutChannel chan int, outputChannel chan
 					}
 				}
 			case gameIndex := <-timeoutChannel:
+				println("timeoutChannel")
 				gState := &gStates[gameIndex]
 				usernames := []string{}
 				for _, p := range (*gState).players {

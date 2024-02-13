@@ -28,10 +28,7 @@ type clientState struct {
 }
 
 func Run() {
-	{ //outside of scope so it can be garbage collected.... I think
-		gState := newGame()
-		gState.players = make([]player, 0)
-	}
+	newGame()
 	inputChannel := make(chan (input))
 	outputChannel := make(chan (clientState))
 	timeoutChannel := make(chan (int))
@@ -43,6 +40,20 @@ func Run() {
 	// defer close(timeoutChannel)
 	go game(inputChannel, timeoutChannel, outputChannel, newGameChannel, closeGameChannel, removePlayerChannel)
 	server(inputChannel, timeoutChannel, outputChannel, newGameChannel, closeGameChannel, removePlayerChannel)
+}
+func testRun() {
+	newGame()
+	inputChannel := make(chan (input))
+	outputChannel := make(chan (clientState))
+	timeoutChannel := make(chan (int))
+	closeGameChannel := make(chan (int))
+	newGameChannel := make(chan (bool))
+	removePlayerChannel := make(chan [2]int)
+	// defer close(inputChannel)
+	// defer close(outputChannel)
+	// defer close(timeoutChannel)
+	go game(inputChannel, timeoutChannel, outputChannel, newGameChannel, closeGameChannel, removePlayerChannel)
+	test(inputChannel, timeoutChannel, outputChannel, newGameChannel, closeGameChannel, removePlayerChannel)
 }
 
 //func test(inputChannel, timeoutChannel, outputChannel, newGameChannel, closeGameChannel, removePlayerChannel)

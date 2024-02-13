@@ -1,10 +1,10 @@
 .letter-grid {
     display: grid;
     grid-template-columns: repeat(6, 4fr);
-    /* Adjust the number based on your grid size */
+    /*Adjust the number based on your grid size*/
     gap: 8px;
-    padding-left: 20%;
-    padding-right: 20%;
+    padding-left: 15%;
+    padding-right: 15%;
     /* Adjust the gap between letters */
 }
 
@@ -18,8 +18,89 @@
     font-weight: bold;
 }
 
-
 .letter-button {
     border-color: 'transparent';
     background-color: "transparent";
+
+}
+
+/* hangman.css */
+
+/* Container for the Hangman game */
+.hangman-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+/* Styling for the hangman image */
+.hangman-image {
+    width: 300px;
+    height: 100px;
+    margin-bottom: 20px;
+}
+
+/* Styling for the turn and host display */
+.turn-host-display {
+    margin-bottom: 20px;
+}
+
+/* Styling for the word display */
+.the-word {
+    margin-bottom: 20px;
+}
+
+/* Styling for the guesses left display */
+.guesses-left {
+    margin-bottom: 20px;
+}
+
+/* Styling for the letters guessed display */
+.letters-guessed {
+    margin-bottom: 20px;
+}
+
+/* Styling for the player names display */
+.player-names {
+    margin-bottom: 20px;
+}
+
+/* Styling for the username input box */
+.username-input-box {
+    margin-bottom: 20px;
+}
+
+/* Styling for the new word input box */
+.new-word-input-box {
+    margin-bottom: 20px;
+}
+
+/* Styling for the letter grid */
+.letter-grid {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 10px;
+}
+
+/* Styling for the letter button */
+.letter-button {
+    padding: 10px 20px;
+    font-size: 16px;
+    border: none;
+    border-radius: 5px;
+    background-color: #3498db;
+    color: #fff;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+}
+
+/* Hover effect for the letter button */
+.letter-button:hover {
+    background-color: #2980b9;
+}
+
+/* Styling for the letters guessed */
+#letters-guessed {
+    margin-right: 5px;
+    font-size: 20px;
 }

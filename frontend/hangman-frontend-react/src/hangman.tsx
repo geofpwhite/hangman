@@ -31,7 +31,7 @@ const HangmanComponent: React.FC<HangmanComponentProps> = ({ gameIndex }) => {
   const [newWordInputValue, setInputValue2] = useState('');
   const alphabet: string = "abcdefghijklmnopqrstuvwxyz";
   useEffect(() => {
-    const ws = new WebSocket('ws://localhost:8000/ws/' + gameIndex);
+    const ws = new WebSocket('ws://localhost:8080/ws/' + gameIndex);
 
     ws.onopen = () => {
       console.log('WebSocket connection opened');
@@ -40,7 +40,6 @@ const HangmanComponent: React.FC<HangmanComponentProps> = ({ gameIndex }) => {
     ws.onmessage = (event) => {
       try {
         let obj = JSON.parse(event.data);
-        let x = { ...obj };
         setGameState(() => {
           // Update the state based on the previous state
           game.fromGameState(obj);
@@ -74,7 +73,7 @@ const HangmanComponent: React.FC<HangmanComponentProps> = ({ gameIndex }) => {
         if (gameState.winner === HOST_WINS) {
 
           return <img src={GAME_OVER} style={{ width: "300px", height: "100px" }} alt="" />
-        } else {
+        } else if (gameState.winner === HOST_LOSES) {
           return <img src={GRATEFUL} style={{ width: "300px", height: "100px" }} alt="" />
         }
       }
@@ -261,7 +260,7 @@ const HangmanComponent: React.FC<HangmanComponentProps> = ({ gameIndex }) => {
 
   const splitWord = () => {
     var str = ""
-    gameState?.revealedWord.split("").forEach((value, index) => {
+    gameState?.revealedWord.split("").forEach((value) => {
       str += " " + value
     })
     return str
@@ -299,6 +298,9 @@ const HangmanComponent: React.FC<HangmanComponentProps> = ({ gameIndex }) => {
   }
 
   const letterGrid = () => {
+    if (gameState?.needNewWord) {
+      return (<div />)
+    }
     return (
       <div className="letter-grid">
         {alphabet.split("").map((value: string, id: number) => {
@@ -384,3 +386,5 @@ const HangmanComponent: React.FC<HangmanComponentProps> = ({ gameIndex }) => {
 };
 
 export default HangmanComponent;
+
+

@@ -1,7 +1,5 @@
 package hangman
 
-import "fmt"
-
 type input interface {
 	ChangeStateAccordingToInput(outputChannel chan clientState)
 }
@@ -23,20 +21,20 @@ type guessInput struct {
 	PlayerIndex int
 }
 
+type chatInput struct {
+}
+
+type ruleChangeInput struct {
+}
+
 func (ui *usernameInput) ChangeStateAccordingToInput(outputChannel chan clientState) {
-	fmt.Println("username change")
-	fmt.Println(ui)
-	fmt.Println(len(gStates))
-	fmt.Println(len(gStates) <= ui.GameIndex)
 	if len(gStates) <= ui.GameIndex {
 		return
 	}
-	fmt.Println("username change")
 	gState := gStates[ui.GameIndex]
 	if len(gState.players) <= ui.PlayerIndex {
 		return
 	}
-	fmt.Println("username change")
 	gState.mut.Lock()
 	(*gState).players[ui.PlayerIndex].username = ui.Username
 	gState.mut.Unlock()
@@ -44,7 +42,6 @@ func (ui *usernameInput) ChangeStateAccordingToInput(outputChannel chan clientSt
 
 }
 func (nwi *newWordInput) ChangeStateAccordingToInput(outputChannel chan clientState) {
-	fmt.Println("word change")
 	if len(gStates) <= nwi.GameIndex {
 		return
 	}
@@ -59,7 +56,6 @@ func (nwi *newWordInput) ChangeStateAccordingToInput(outputChannel chan clientSt
 	}
 }
 func (gi *guessInput) ChangeStateAccordingToInput(outputChannel chan clientState) {
-	fmt.Println("guess change")
 	if len(gStates) <= gi.GameIndex {
 		return
 	}
