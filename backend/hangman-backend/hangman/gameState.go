@@ -3,6 +3,7 @@ package hangman
 import (
 	"database/sql"
 	"fmt"
+	"log"
 	"slices"
 	"strings"
 	"sync"
@@ -28,11 +29,12 @@ func (gState *gameState) runTicker(timeoutChannel chan int, inputChannel chan in
 	ticker := time.NewTicker(60 * time.Second)
 	timeoutsInARow := 0
 	defer ticker.Stop()
+	defer close(inputChannel)
 
 	for {
 		select {
 		case <-ticker.C:
-			println("ticker")
+			log.Println("ticker")
 
 			timeoutChannel <- (*gState).gameIndex
 			timeoutsInARow++
@@ -43,11 +45,14 @@ func (gState *gameState) runTicker(timeoutChannel chan int, inputChannel chan in
 			// Send information over the WebSocket connection every 60 seconds
 		case x := <-inputChannel:
 			fmt.Println("ticker input channel", x)
+			fmt.Println(inputChannel)
+			log.Println("ticker input channel", x)
 			if len((*gState).players) == 0 || x.PlayerIndex == -1 {
 				return
 			}
 			if x.PlayerIndex == (*gState).turn {
-				ticker.Reset(60 * time.Second)
+				ticker.Stop()
+				ticker = time.NewTicker(60 * time.Second)
 				timeoutsInARow = 0
 			}
 			// ticker = time.NewTicker(1 * time.Second)
@@ -154,9 +159,7 @@ func (gState *gameState) closeGame() {
 	for i := range gStates[gState.gameIndex+1:] {
 		gStates[i+gState.gameIndex+1].gameIndex--
 	}
-
 	gStates = slices.Delete(gStates, gState.gameIndex, gState.gameIndex+1)
-
 }
 
 func (gState *gameState) removePlayer(playerIndex int, tickerInputChannels []chan inputInfo, outputChannel chan clientState, closeGameChannel chan int) {
@@ -164,14 +167,9 @@ func (gState *gameState) removePlayer(playerIndex int, tickerInputChannels []cha
 	gState.mut.Lock()
 	defer gState.mut.Unlock()
 	gState.players = slices.Delete(gState.players, playerIndex, playerIndex+1)
-
 	if len(gState.players) == 0 {
 		closeGameChannel <- gState.gameIndex
-		// gState.mut.Unlock()
-		// gState.closeGame()
-		// gState.mut.Lock()
 	} else {
-		// outputChannel <- clientState{GameIndex: gState.gameIndex}
 		gState.turn = gState.turn % len(gState.players)
 		gState.curHostIndex = gState.curHostIndex % len(gState.players)
 		if gState.needNewWord && gState.curHostIndex != gState.turn {

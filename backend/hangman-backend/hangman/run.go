@@ -1,6 +1,9 @@
 package hangman
 
 import (
+	"log"
+	"os"
+
 	_ "github.com/mattn/go-sqlite3"
 )
 
@@ -35,6 +38,9 @@ func Run() {
 	closeGameChannel := make(chan (int))
 	newGameChannel := make(chan (bool))
 	removePlayerChannel := make(chan [2]int)
+	os.Remove("app.log")
+	file, _ := os.OpenFile("app.log", os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0666)
+	log.SetOutput(file)
 	// defer close(inputChannel)
 	// defer close(outputChannel)
 	// defer close(timeoutChannel)

@@ -2,6 +2,7 @@ package hangman
 
 import (
 	// "fmt"
+	"log"
 	"slices"
 
 	"github.com/gorilla/websocket"
@@ -37,12 +38,11 @@ func game(
 	go gStates[0].runTicker(tickerTimeoutChannel, tickerInputChannels[0], closeGameChannel)
 	go func() {
 		for gameIndex := range closeGameChannel {
-			println("close game channel")
+			log.Println("close game channel")
 			if gameIndex < len(gStates) {
 				gStates[gameIndex].gameIndex = gameIndex
 				gStates[gameIndex].closeGame()
 				tickerInputChannels[gameIndex] <- inputInfo{GameIndex: -1}
-				close(tickerInputChannels[gameIndex])
 				tickerInputChannels = slices.Delete(tickerInputChannels, gameIndex, gameIndex+1)
 			}
 		}
@@ -50,7 +50,7 @@ func game(
 	for {
 		select {
 		case removePlayer := <-removePlayerChannel:
-			println("removePlayerChannel")
+			log.Println("removePlayerChannel")
 			if removePlayer[0] >= len(gStates) {
 				continue
 			}
@@ -62,21 +62,21 @@ func game(
 			gState.removePlayer(playerIndex, tickerInputChannels, outputChannel, closeGameChannel)
 
 		case <-newGameChannel:
-			println("newGameChannel")
+			log.Println("newGameChannel")
 			gState := newGame()
 			newTickerInputChannel := make(chan (inputInfo))
 			tickerInputChannels = append(tickerInputChannels, newTickerInputChannel)
 			go (*gState).runTicker(tickerTimeoutChannel, newTickerInputChannel, closeGameChannel)
 
 		case gameIndex := <-tickerTimeoutChannel:
-			println("tickertimeoutchannel")
+			log.Println("tickertimeoutchannel")
 			if gameIndex >= len(gStates) {
 				continue
 			}
 			gState := gStates[gameIndex]
 			//timed out, move to the next player
 			if len((*gState).players) <= 1 {
-				closeGameChannel <- gameIndex
+				// closeGameChannel <- gameIndex
 				continue
 			}
 			gState.mut.Lock()
@@ -94,7 +94,11 @@ func game(
 			timeoutChannel <- gameIndex //for the websocket to update everybody
 
 		case info := <-inputChannel:
-			println("input channel")
+			log.Println("input channel")
+			if info.GetGameIndex() >= len(gStates) {
+				continue
+			}
+			tickerInputChannels[info.GetGameIndex()] <- inputInfo{PlayerIndex: info.GetPlayerIndex()}
 			info.ChangeStateAccordingToInput(outputChannel)
 		}
 

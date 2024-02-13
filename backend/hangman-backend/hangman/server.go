@@ -142,7 +142,7 @@ func server(inputChannel chan input, timeoutChannel chan int, outputChannel chan
 		}
 		conn, err := upgrader.Upgrade(c.Writer, c.Request, nil)
 		if err != nil {
-			log.Println(err)
+			fmt.Println(err)
 			conn.Close()
 			return
 		}
@@ -154,7 +154,7 @@ func server(inputChannel chan input, timeoutChannel chan int, outputChannel chan
 			// write changed state to clients
 			select {
 			case s := <-outputChannel:
-				println("outputChannel")
+				log.Println("outputChannel")
 				if s.GameIndex >= len(gStates) {
 					continue
 				}
@@ -191,7 +191,7 @@ func server(inputChannel chan input, timeoutChannel chan int, outputChannel chan
 					}
 				}
 			case gameIndex := <-timeoutChannel:
-				println("timeoutChannel")
+				log.Println("timeoutChannel")
 				gState := &gStates[gameIndex]
 				usernames := []string{}
 				for _, p := range (*gState).players {

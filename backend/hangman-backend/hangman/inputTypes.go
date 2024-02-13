@@ -2,6 +2,8 @@ package hangman
 
 type input interface {
 	ChangeStateAccordingToInput(outputChannel chan clientState)
+	GetGameIndex() int
+	GetPlayerIndex() int
 }
 type usernameInput struct {
 	Username    string
@@ -25,6 +27,25 @@ type chatInput struct {
 }
 
 type ruleChangeInput struct {
+}
+
+func (ui *usernameInput) GetGameIndex() int {
+	return ui.GameIndex
+}
+func (ui *usernameInput) GetPlayerIndex() int {
+	return ui.PlayerIndex
+}
+func (nwi *newWordInput) GetGameIndex() int {
+	return nwi.GameIndex
+}
+func (nwi *newWordInput) GetPlayerIndex() int {
+	return nwi.PlayerIndex
+}
+func (gi *guessInput) GetGameIndex() int {
+	return gi.GameIndex
+}
+func (gi *guessInput) GetPlayerIndex() int {
+	return gi.PlayerIndex
 }
 
 func (ui *usernameInput) ChangeStateAccordingToInput(outputChannel chan clientState) {
@@ -63,7 +84,6 @@ func (gi *guessInput) ChangeStateAccordingToInput(outputChannel chan clientState
 	if len(gState.players) <= gi.PlayerIndex {
 		return
 	}
-
 	if gi.PlayerIndex == (*gState).turn {
 		// fmt.Println("guess")
 		(*gState).guess(rune(gi.Guess[0]), outputChannel)
