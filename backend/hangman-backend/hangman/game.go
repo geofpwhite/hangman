@@ -55,11 +55,20 @@ func game(
 				continue
 			}
 			gState := gStates[removePlayer[0]]
+			gState.mut.Lock()
 			if removePlayer[1] >= len(gState.players) || removePlayer[0] < 0 || removePlayer[1] < 0 {
+				gState.mut.Unlock()
 				continue
 			}
 			playerIndex := removePlayer[1]
-			gState.removePlayer(playerIndex, tickerInputChannels, outputChannel, closeGameChannel)
+			if len(gState.players) == 0 || len(gState.players) == 1 {
+				closeGameChannel <- gState.gameIndex
+				gState.mut.Unlock()
+			} else {
+				gState.mut.Unlock()
+				gState.removePlayer(playerIndex)
+				outputChannel <- clientState{GameIndex: gState.gameIndex}
+			}
 
 		case <-newGameChannel:
 			log.Println("newGameChannel")
@@ -76,22 +85,9 @@ func game(
 			gState := gStates[gameIndex]
 			//timed out, move to the next player
 			if len((*gState).players) <= 1 {
-				// closeGameChannel <- gameIndex
 				continue
 			}
-			gState.mut.Lock()
-			if gState.needNewWord {
-				gState.curHostIndex = (gState.curHostIndex + 1) % len(gState.players)
-				gState.turn = gState.curHostIndex
-			} else {
-
-				(*gState).turn = ((*gState).turn + 1) % len((*gState).players)
-				if (*gState).curHostIndex == (*gState).turn {
-					(*gState).turn = ((*gState).turn + 1) % len((*gState).players)
-				}
-			}
-			gState.mut.Unlock()
-			timeoutChannel <- gameIndex //for the websocket to update everybody
+			timeoutChannel <- gState.handleTickerTimeout(timeoutChannel)
 
 		case info := <-inputChannel:
 			log.Println("input channel")

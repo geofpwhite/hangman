@@ -10,6 +10,11 @@ import (
 	"time"
 )
 
+type chatLog struct {
+	Message string `json:"message"`
+	Sender  string `json:"sender"`
+}
+
 type gameState struct {
 	wordCheck    *sql.DB
 	currentWord  string
@@ -23,6 +28,25 @@ type gameState struct {
 	winner       int
 	gameIndex    int
 	mut          *sync.Mutex
+	chatLogs     []chatLog
+}
+
+func newGame() *gameState {
+	wordCheck, _ := sql.Open("sqlite3", "./words.db")
+	gState := &gameState{
+		wordCheck:    wordCheck,
+		currentWord:  "",
+		revealedWord: "",
+		winner:       -1,
+		needNewWord:  true,
+		guessesLeft:  6,
+		players:      make([]player, 0),
+		gameIndex:    len(gStates),
+		mut:          &sync.Mutex{},
+	}
+
+	gStates = append(gStates, gState)
+	return gState
 }
 
 func (gState *gameState) runTicker(timeoutChannel chan int, inputChannel chan inputInfo, closeGameChannel chan int) {
@@ -53,6 +77,7 @@ func (gState *gameState) runTicker(timeoutChannel chan int, inputChannel chan in
 			if x.PlayerIndex == (*gState).turn {
 				ticker.Stop()
 				ticker = time.NewTicker(60 * time.Second)
+				fmt.Println("ticker reset")
 				timeoutsInARow = 0
 			}
 			// ticker = time.NewTicker(1 * time.Second)
@@ -68,11 +93,11 @@ func (gState *gameState) newPlayer(p player) {
 	}
 }
 
-func (gState *gameState) guess(letter rune, outputChannel chan clientState) {
+func (gState *gameState) guess(letter rune) (bool, clientState) {
 	gState.mut.Lock()
 	defer gState.mut.Unlock()
 	if gState.needNewWord {
-		return
+		return false, clientState{}
 	}
 	if !strings.Contains(gState.guessed, string(letter)) {
 		good := false
@@ -104,11 +129,14 @@ func (gState *gameState) guess(letter rune, outputChannel chan clientState) {
 				gState.turn = (gState.turn + 1) % len(gState.players)
 			}
 		}
-		outputChannel <- changedPartsOfState
+		return true, changedPartsOfState
 	}
+	return false, clientState{}
 }
 
-func (gState *gameState) newWord(word string, outputChannel chan clientState) {
+func (gState *gameState) newWord(word string) {
+	gState.mut.Lock()
+	defer gState.mut.Unlock()
 	x, _ := gState.wordCheck.Query("select word from words where word='" + word + "'")
 	result := ""
 	if x.Next() {
@@ -120,8 +148,6 @@ func (gState *gameState) newWord(word string, outputChannel chan clientState) {
 	} else {
 		return
 	}
-	gState.mut.Lock()
-	defer gState.mut.Unlock()
 	gState.currentWord = word
 	gState.revealedWord = ""
 	gState.needNewWord = false
@@ -132,52 +158,61 @@ func (gState *gameState) newWord(word string, outputChannel chan clientState) {
 		gState.revealedWord += "_"
 	}
 	gState.turn = (gState.curHostIndex + 1) % len(gState.players)
-	outputChannel <- clientState{GameIndex: gState.gameIndex}
-}
-
-func newGame() *gameState {
-	wordCheck, _ := sql.Open("sqlite3", "./words.db")
-	gState := &gameState{
-		wordCheck:    wordCheck,
-		currentWord:  "",
-		revealedWord: "",
-		winner:       -1,
-		needNewWord:  true,
-		guessesLeft:  6,
-		players:      make([]player, 0),
-		gameIndex:    len(gStates),
-		mut:          &sync.Mutex{},
-	}
-
-	gStates = append(gStates, gState)
-	return gState
 }
 
 func (gState *gameState) closeGame() {
 	gState.mut.Lock()
 	defer gState.mut.Unlock()
 	for i := range gStates[gState.gameIndex+1:] {
+		gStates[i+gState.gameIndex+1].mut.Lock()
 		gStates[i+gState.gameIndex+1].gameIndex--
+		gStates[i+gState.gameIndex+1].mut.Unlock()
 	}
 	gStates = slices.Delete(gStates, gState.gameIndex, gState.gameIndex+1)
 }
 
-func (gState *gameState) removePlayer(playerIndex int, tickerInputChannels []chan inputInfo, outputChannel chan clientState, closeGameChannel chan int) {
+func (gState *gameState) removePlayer(playerIndex int) {
 	// playerIndex := removePlayer[1]
+
 	gState.mut.Lock()
 	defer gState.mut.Unlock()
 	gState.players = slices.Delete(gState.players, playerIndex, playerIndex+1)
-	if len(gState.players) == 0 {
-		closeGameChannel <- gState.gameIndex
-	} else {
-		gState.turn = gState.turn % len(gState.players)
-		gState.curHostIndex = gState.curHostIndex % len(gState.players)
-		if gState.needNewWord && gState.curHostIndex != gState.turn {
-			gState.turn = gState.curHostIndex
-		} else if !gState.needNewWord && gState.curHostIndex == gState.turn {
-			gState.turn = (gState.turn + 1) % len(gState.players)
-		}
-		outputChannel <- clientState{GameIndex: gState.gameIndex}
+	gState.turn = gState.turn % len(gState.players)
+	gState.curHostIndex = gState.curHostIndex % len(gState.players)
+	if gState.needNewWord && gState.curHostIndex != gState.turn {
+		gState.turn = gState.curHostIndex
+	} else if !gState.needNewWord && gState.curHostIndex == gState.turn {
+		gState.turn = (gState.turn + 1) % len(gState.players)
 	}
+}
 
+func (gState *gameState) handleTickerTimeout(timeoutChannel chan int) int {
+	gState.mut.Lock()
+	defer gState.mut.Unlock()
+	if gState.needNewWord {
+		gState.curHostIndex = (gState.curHostIndex + 1) % len(gState.players)
+		gState.turn = gState.curHostIndex
+	} else {
+		(*gState).turn = ((*gState).turn + 1) % len((*gState).players)
+		if (*gState).curHostIndex == (*gState).turn {
+			(*gState).turn = ((*gState).turn + 1) % len((*gState).players)
+		}
+	}
+	return gState.gameIndex
+}
+
+func (gState *gameState) changeUsername(playerIndex int, newUsername string) {
+	gState.mut.Lock()
+	gState.players[playerIndex].username = newUsername
+	gState.mut.Unlock()
+}
+
+func (gState *gameState) chat(message string, playerIndex int) {
+	gState.mut.Lock()
+	gState.chatLogs = append(gState.chatLogs,
+		chatLog{
+			Message: message,
+			Sender:  gState.players[playerIndex].username,
+		})
+	gState.mut.Unlock()
 }

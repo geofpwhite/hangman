@@ -13,21 +13,20 @@ import (
 	"github.com/gorilla/websocket"
 )
 
-// var connections []*websocket.Conn = []*websocket.Conn{}
-
 var upgrader = websocket.Upgrader{
 	CheckOrigin: func(r *http.Request) bool {
 		return true
 	},
 }
 
-func (gState *gameState) handleWebSocket(
+func handleWebSocket(
 	conn *websocket.Conn,
 	inputChannel chan input,
 	timeoutChannel chan int,
 	outputChannel chan clientState,
 	closeGameChannel chan int,
 	removePlayerChannel chan [2]int,
+	gState *gameState,
 ) {
 	// first thing to do when we have a new connection is tell them the current game state
 
@@ -55,7 +54,9 @@ func (gState *gameState) handleWebSocket(
 		PlayerIndex:    playerIndex,
 		Winner:         gState.winner,
 		GameIndex:      gState.gameIndex,
+		ChatLogs:       gState.chatLogs,
 	}
+
 	for i, player := range gState.players {
 		currentState.PlayerIndex = i
 		player.connection.WriteJSON(currentState)
@@ -112,13 +113,11 @@ func server(inputChannel chan input, timeoutChannel chan int, outputChannel chan
 	r := gin.Default()
 	r.Use(func(c *gin.Context) {
 		c.Writer.Header().Set("Access-Control-Allow-Origin", "*")
-
 		// Handle preflight requests
 		if c.Request.Method == "OPTIONS" {
 			c.AbortWithStatus(204)
 			return
 		}
-
 	})
 	r.GET("/new_game", func(c *gin.Context) {
 		newGameChannel <- true
@@ -146,7 +145,7 @@ func server(inputChannel chan input, timeoutChannel chan int, outputChannel chan
 			conn.Close()
 			return
 		}
-		gStates[gameIndex].handleWebSocket(conn, inputChannel, timeoutChannel, outputChannel, closeGameChannel, removePlayerChannel)
+		handleWebSocket(conn, inputChannel, timeoutChannel, outputChannel, closeGameChannel, removePlayerChannel, gStates[gameIndex])
 		// Handle WebSocket connections here
 	})
 	go func() {
@@ -175,6 +174,7 @@ func server(inputChannel chan input, timeoutChannel chan int, outputChannel chan
 					NeedNewWord:    (*gState).needNewWord,
 					Warning:        "",
 					Winner:         (*gState).winner,
+					ChatLogs:       (*gState).chatLogs,
 				}
 				if newState.NeedNewWord {
 					newState.RevealedWord = (*gState).currentWord

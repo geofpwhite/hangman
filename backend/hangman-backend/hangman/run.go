@@ -17,17 +17,18 @@ type inputInfo struct {
 
 /*  */
 type clientState struct {
-	Players        []string `json:"players"`
-	Turn           int      `json:"turn"`
-	Host           int      `json:"host"`
-	RevealedWord   string   `json:"revealedWord"`
-	GuessesLeft    int      `json:"guessesLeft"`
-	LettersGuessed string   `json:"lettersGuessed"`
-	NeedNewWord    bool     `json:"needNewWord"`
-	Warning        string   `json:"warning"`
-	PlayerIndex    int      `json:"playerIndex"` // changes for each connection that the update state object is sent to
-	Winner         int      `json:"winner"`
-	GameIndex      int      `json:"gameIndex"`
+	Players        []string  `json:"players"`
+	Turn           int       `json:"turn"`
+	Host           int       `json:"host"`
+	RevealedWord   string    `json:"revealedWord"`
+	GuessesLeft    int       `json:"guessesLeft"`
+	LettersGuessed string    `json:"lettersGuessed"`
+	NeedNewWord    bool      `json:"needNewWord"`
+	Warning        string    `json:"warning"`
+	PlayerIndex    int       `json:"playerIndex"` // changes for each connection that the update state object is sent to
+	Winner         int       `json:"winner"`
+	GameIndex      int       `json:"gameIndex"`
+	ChatLogs       []chatLog `json:"chatLogs"`
 }
 
 func Run() {
