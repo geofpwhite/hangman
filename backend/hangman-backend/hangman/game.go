@@ -55,19 +55,17 @@ func game(
 				continue
 			}
 			gState := gStates[removePlayer[0]]
-			gState.mut.Lock()
 			if removePlayer[1] >= len(gState.players) || removePlayer[0] < 0 || removePlayer[1] < 0 {
-				gState.mut.Unlock()
 				continue
 			}
 			playerIndex := removePlayer[1]
 			if len(gState.players) == 0 || len(gState.players) == 1 {
 				closeGameChannel <- gState.gameIndex
-				gState.mut.Unlock()
 			} else {
-				gState.mut.Unlock()
-				gState.removePlayer(playerIndex)
-				outputChannel <- clientState{GameIndex: gState.gameIndex}
+				go func() {
+					gState.removePlayer(playerIndex)
+					outputChannel <- clientState{GameIndex: gState.gameIndex}
+				}()
 			}
 
 		case <-newGameChannel:
@@ -87,7 +85,9 @@ func game(
 			if len((*gState).players) <= 1 {
 				continue
 			}
-			timeoutChannel <- gState.handleTickerTimeout(timeoutChannel)
+			go func() {
+				timeoutChannel <- gState.handleTickerTimeout(timeoutChannel)
+			}()
 
 		case info := <-inputChannel:
 			log.Println("input channel")
@@ -95,7 +95,7 @@ func game(
 				continue
 			}
 			tickerInputChannels[info.GetGameIndex()] <- inputInfo{PlayerIndex: info.GetPlayerIndex()}
-			info.ChangeStateAccordingToInput(outputChannel)
+			go info.ChangeStateAccordingToInput(outputChannel)
 		}
 
 	}

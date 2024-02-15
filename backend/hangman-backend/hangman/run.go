@@ -13,6 +13,7 @@ type inputInfo struct {
 	Word        string `json:"word"`
 	PlayerIndex int    `json:"playerIndex"`
 	GameIndex   int    `json:"gameIndex"`
+	Chat        string `json:"chat"`
 }
 
 /*  */
@@ -48,7 +49,7 @@ func Run() {
 	go game(inputChannel, timeoutChannel, outputChannel, newGameChannel, closeGameChannel, removePlayerChannel)
 	server(inputChannel, timeoutChannel, outputChannel, newGameChannel, closeGameChannel, removePlayerChannel)
 }
-func testRun() {
+func TestRun() {
 	newGame()
 	inputChannel := make(chan (input))
 	outputChannel := make(chan (clientState))
@@ -60,7 +61,5 @@ func testRun() {
 	// defer close(outputChannel)
 	// defer close(timeoutChannel)
 	go game(inputChannel, timeoutChannel, outputChannel, newGameChannel, closeGameChannel, removePlayerChannel)
-	test(inputChannel, timeoutChannel, outputChannel, newGameChannel, closeGameChannel, removePlayerChannel)
+	test()
 }
-
-//func test(inputChannel, timeoutChannel, outputChannel, newGameChannel, closeGameChannel, removePlayerChannel)

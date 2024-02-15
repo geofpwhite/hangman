@@ -12,5 +12,6 @@ func main() {
 		r.Static("/", "./build/")
 		r.Run("localhost:4200")
 	}()
+	// hangman.TestRun()
 	hangman.Run()
 }

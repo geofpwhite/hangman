@@ -98,14 +98,14 @@ func handleWebSocket(
 				i.Word = pString[2:]
 				inp := newWordInput{GameIndex: i.GameIndex, PlayerIndex: i.PlayerIndex, NewWord: i.Word}
 				inputChannel <- &inp
+			case "c:":
+				i.Chat = pString[2:]
+				inp := chatInput{GameIndex: i.GameIndex, PlayerIndex: i.PlayerIndex, Message: i.Chat}
+				inputChannel <- &inp
 			default:
 				continue
 			}
-
-			// inputChannel <- i
-			// send what the user wants to do to input channel for game function to handle
 		}
-
 	}
 }
 
@@ -148,77 +148,83 @@ func server(inputChannel chan input, timeoutChannel chan int, outputChannel chan
 		handleWebSocket(conn, inputChannel, timeoutChannel, outputChannel, closeGameChannel, removePlayerChannel, gStates[gameIndex])
 		// Handle WebSocket connections here
 	})
-	go func() {
-		for {
-			// write changed state to clients
-			select {
-			case s := <-outputChannel:
-				log.Println("outputChannel")
-				if s.GameIndex >= len(gStates) {
-					continue
-				}
-				gState := &gStates[s.GameIndex]
 
-				usernames := []string{}
-				for _, p := range (*gState).players {
-					usernames = append(usernames, p.username)
-				}
-				newState := clientState{
-					GameIndex:      (*gState).gameIndex,
-					Players:        usernames,
-					Turn:           (*gState).turn,
-					Host:           (*gState).curHostIndex,
-					RevealedWord:   (*gState).revealedWord,
-					GuessesLeft:    (*gState).guessesLeft,
-					LettersGuessed: (*gState).guessed,
-					NeedNewWord:    (*gState).needNewWord,
-					Warning:        "",
-					Winner:         (*gState).winner,
-					ChatLogs:       (*gState).chatLogs,
-				}
-				if newState.NeedNewWord {
-					newState.RevealedWord = (*gState).currentWord
-				}
-				for i, player := range (*gState).players {
-					newState.PlayerIndex = i
-					if i == s.PlayerIndex {
-						newState.Warning = s.Warning
-					} else {
-						newState.Warning = ""
-					}
-					if err := player.connection.WriteJSON(newState); err != nil {
-						println(err)
-					}
-				}
-			case gameIndex := <-timeoutChannel:
-				log.Println("timeoutChannel")
-				gState := &gStates[gameIndex]
-				usernames := []string{}
-				for _, p := range (*gState).players {
-					usernames = append(usernames, p.username)
-				}
-				newState := clientState{
-					Players:        usernames,
-					Turn:           (*gState).turn,
-					Host:           (*gState).curHostIndex,
-					RevealedWord:   (*gState).revealedWord,
-					GuessesLeft:    (*gState).guessesLeft,
-					LettersGuessed: (*gState).guessed,
-					NeedNewWord:    (*gState).needNewWord,
-					GameIndex:      (*gState).gameIndex,
-					Warning:        "timed out",
-					Winner:         (*gState).winner,
-				}
+	go outputLoop(timeoutChannel, outputChannel)
+	gin.SetMode(gin.ReleaseMode)
+	r.Run("localhost:8080") // listen and serve on 0.0.0.0:8080 (for windows "localhost:8080")
+}
 
-				for i, player := range (*gState).players {
-					newState.PlayerIndex = i
-					if err := player.connection.WriteJSON(newState); err != nil {
-						println(err)
-					}
+func outputLoop(
+	timeoutChannel chan int,
+	outputChannel chan clientState,
+) {
+	for {
+		// write changed state to clients
+		select {
+		case s := <-outputChannel:
+			log.Println("outputChannel")
+			if s.GameIndex >= len(gStates) {
+				continue
+			}
+			gState := &gStates[s.GameIndex]
+
+			usernames := []string{}
+			for _, p := range (*gState).players {
+				usernames = append(usernames, p.username)
+			}
+			newState := clientState{
+				GameIndex:      (*gState).gameIndex,
+				Players:        usernames,
+				Turn:           (*gState).turn,
+				Host:           (*gState).curHostIndex,
+				RevealedWord:   (*gState).revealedWord,
+				GuessesLeft:    (*gState).guessesLeft,
+				LettersGuessed: (*gState).guessed,
+				NeedNewWord:    (*gState).needNewWord,
+				Warning:        "",
+				Winner:         (*gState).winner,
+				ChatLogs:       (*gState).chatLogs,
+			}
+			if newState.NeedNewWord {
+				newState.RevealedWord = (*gState).currentWord
+			}
+			for i, player := range (*gState).players {
+				newState.PlayerIndex = i
+				if i == s.PlayerIndex {
+					newState.Warning = s.Warning
+				} else {
+					newState.Warning = ""
+				}
+				if err := player.connection.WriteJSON(newState); err != nil {
+					println(err)
+				}
+			}
+		case gameIndex := <-timeoutChannel:
+			log.Println("timeoutChannel")
+			gState := &gStates[gameIndex]
+			usernames := []string{}
+			for _, p := range (*gState).players {
+				usernames = append(usernames, p.username)
+			}
+			newState := clientState{
+				Players:        usernames,
+				Turn:           (*gState).turn,
+				Host:           (*gState).curHostIndex,
+				RevealedWord:   (*gState).revealedWord,
+				GuessesLeft:    (*gState).guessesLeft,
+				LettersGuessed: (*gState).guessed,
+				NeedNewWord:    (*gState).needNewWord,
+				GameIndex:      (*gState).gameIndex,
+				Warning:        "timed out",
+				Winner:         (*gState).winner,
+			}
+
+			for i, player := range (*gState).players {
+				newState.PlayerIndex = i
+				if err := player.connection.WriteJSON(newState); err != nil {
+					println(err)
 				}
 			}
 		}
-	}()
-	gin.SetMode(gin.ReleaseMode)
-	r.Run("localhost:8080") // listen and serve on 0.0.0.0:8080 (for windows "localhost:8080")
+	}
 }

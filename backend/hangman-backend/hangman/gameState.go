@@ -49,6 +49,9 @@ func newGame() *gameState {
 	return gState
 }
 
+/*
+starts a ticker that either times out the current turn and increments it, or resets back to 0 on user input
+*/
 func (gState *gameState) runTicker(timeoutChannel chan int, inputChannel chan inputInfo, closeGameChannel chan int) {
 	ticker := time.NewTicker(60 * time.Second)
 	timeoutsInARow := 0
@@ -69,7 +72,6 @@ func (gState *gameState) runTicker(timeoutChannel chan int, inputChannel chan in
 			// Send information over the WebSocket connection every 60 seconds
 		case x := <-inputChannel:
 			fmt.Println("ticker input channel", x)
-			fmt.Println(inputChannel)
 			log.Println("ticker input channel", x)
 			if len((*gState).players) == 0 || x.PlayerIndex == -1 {
 				return
@@ -203,16 +205,16 @@ func (gState *gameState) handleTickerTimeout(timeoutChannel chan int) int {
 
 func (gState *gameState) changeUsername(playerIndex int, newUsername string) {
 	gState.mut.Lock()
+	defer gState.mut.Unlock()
 	gState.players[playerIndex].username = newUsername
-	gState.mut.Unlock()
 }
 
 func (gState *gameState) chat(message string, playerIndex int) {
 	gState.mut.Lock()
+	defer gState.mut.Unlock()
 	gState.chatLogs = append(gState.chatLogs,
 		chatLog{
 			Message: message,
 			Sender:  gState.players[playerIndex].username,
 		})
-	gState.mut.Unlock()
 }
