@@ -56,7 +56,7 @@ func (gState *gameState) runTicker(timeoutChannel chan int, inputChannel chan in
 	ticker := time.NewTicker(60 * time.Second)
 	timeoutsInARow := 0
 	defer ticker.Stop()
-	defer close(inputChannel)
+	defer close(inputChannel) // this may be bad practice to close from the reader side but
 
 	for {
 		select {
@@ -71,7 +71,6 @@ func (gState *gameState) runTicker(timeoutChannel chan int, inputChannel chan in
 
 			// Send information over the WebSocket connection every 60 seconds
 		case x := <-inputChannel:
-			fmt.Println("ticker input channel", x)
 			log.Println("ticker input channel", x)
 			if len((*gState).players) == 0 || x.PlayerIndex == -1 {
 				return
@@ -204,9 +203,16 @@ func (gState *gameState) handleTickerTimeout(timeoutChannel chan int) int {
 }
 
 func (gState *gameState) changeUsername(playerIndex int, newUsername string) {
+	log.Println("change username")
 	gState.mut.Lock()
 	defer gState.mut.Unlock()
+	oldUsername := gState.players[playerIndex].username
 	gState.players[playerIndex].username = newUsername
+	for i, chat := range gState.chatLogs {
+		if chat.Sender == oldUsername {
+			gState.chatLogs[i].Sender = newUsername
+		}
+	}
 }
 
 func (gState *gameState) chat(message string, playerIndex int) {

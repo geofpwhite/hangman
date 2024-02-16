@@ -65,7 +65,7 @@ func handleWebSocket(
 	for {
 		messageType, p, err := conn.ReadMessage()
 		if err != nil {
-			index := slices.Index(gState.players, newPlayer)
+			index := slices.IndexFunc(gState.players, func(p player) bool { return p.connection == conn })
 			if index == -1 {
 				return
 			}
@@ -166,29 +166,29 @@ func outputLoop(
 			if s.GameIndex >= len(gStates) {
 				continue
 			}
-			gState := &gStates[s.GameIndex]
+			gState := gStates[s.GameIndex]
 
 			usernames := []string{}
-			for _, p := range (*gState).players {
+			for _, p := range gState.players {
 				usernames = append(usernames, p.username)
 			}
 			newState := clientState{
-				GameIndex:      (*gState).gameIndex,
+				GameIndex:      gState.gameIndex,
 				Players:        usernames,
-				Turn:           (*gState).turn,
-				Host:           (*gState).curHostIndex,
-				RevealedWord:   (*gState).revealedWord,
-				GuessesLeft:    (*gState).guessesLeft,
-				LettersGuessed: (*gState).guessed,
-				NeedNewWord:    (*gState).needNewWord,
+				Turn:           gState.turn,
+				Host:           gState.curHostIndex,
+				RevealedWord:   gState.revealedWord,
+				GuessesLeft:    gState.guessesLeft,
+				LettersGuessed: gState.guessed,
+				NeedNewWord:    gState.needNewWord,
 				Warning:        "",
-				Winner:         (*gState).winner,
-				ChatLogs:       (*gState).chatLogs,
+				Winner:         gState.winner,
+				ChatLogs:       gState.chatLogs,
 			}
 			if newState.NeedNewWord {
-				newState.RevealedWord = (*gState).currentWord
+				newState.RevealedWord = gState.currentWord
 			}
-			for i, player := range (*gState).players {
+			for i, player := range gState.players {
 				newState.PlayerIndex = i
 				if i == s.PlayerIndex {
 					newState.Warning = s.Warning
@@ -196,33 +196,38 @@ func outputLoop(
 					newState.Warning = ""
 				}
 				if err := player.connection.WriteJSON(newState); err != nil {
-					println(err)
+					fmt.Println(err)
 				}
 			}
 		case gameIndex := <-timeoutChannel:
 			log.Println("timeoutChannel")
-			gState := &gStates[gameIndex]
+			if gameIndex >= len(gStates) || gameIndex < 0 {
+				continue
+			}
+			gState := gStates[gameIndex]
 			usernames := []string{}
 			for _, p := range (*gState).players {
 				usernames = append(usernames, p.username)
 			}
 			newState := clientState{
 				Players:        usernames,
-				Turn:           (*gState).turn,
-				Host:           (*gState).curHostIndex,
-				RevealedWord:   (*gState).revealedWord,
-				GuessesLeft:    (*gState).guessesLeft,
-				LettersGuessed: (*gState).guessed,
-				NeedNewWord:    (*gState).needNewWord,
-				GameIndex:      (*gState).gameIndex,
+				Turn:           gState.turn,
+				Host:           gState.curHostIndex,
+				RevealedWord:   gState.revealedWord,
+				GuessesLeft:    gState.guessesLeft,
+				LettersGuessed: gState.guessed,
+				NeedNewWord:    gState.needNewWord,
+				GameIndex:      gState.gameIndex,
 				Warning:        "timed out",
-				Winner:         (*gState).winner,
+				Winner:         gState.winner,
+				ChatLogs:       gState.chatLogs,
 			}
 
+			gState.mut.Lock()
 			for i, player := range (*gState).players {
 				newState.PlayerIndex = i
 				if err := player.connection.WriteJSON(newState); err != nil {
-					println(err)
+					fmt.Println(err)
 				}
 			}
 		}

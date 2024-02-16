@@ -81,7 +81,6 @@ func game(
 				continue
 			}
 			gState := gStates[gameIndex]
-			//timed out, move to the next player
 			if len((*gState).players) <= 1 {
 				continue
 			}
@@ -95,8 +94,8 @@ func game(
 				continue
 			}
 			tickerInputChannels[info.GetGameIndex()] <- inputInfo{PlayerIndex: info.GetPlayerIndex()}
+			log.Println(info)
 			go info.ChangeStateAccordingToInput(outputChannel)
 		}
-
 	}
 }

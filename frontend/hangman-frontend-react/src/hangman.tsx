@@ -12,6 +12,7 @@ import LEFT7 from "./7left.png"
 import LEFT8 from "./8left.png"
 import LEFT9 from "./9left.png"
 import GRATEFUL from "./grateful.jpeg"
+import Chat from './chat';
 
 
 
@@ -60,6 +61,14 @@ const HangmanComponent: React.FC<HangmanComponentProps> = ({ gameIndex }) => {
       ws.close();
     };
   }, []); // Empty dependency array ensures this effect runs only once
+  const chats = () => {
+    if (gameState) {
+      return (
+
+        <Chat chats={gameState.chatLogs} sendMessage={sendChat} players={gameState.players} playerIndex={gameState.playerIndex}></Chat>
+      )
+    }
+  }
 
 
   const drawHangMan = () => {
@@ -85,6 +94,9 @@ const HangmanComponent: React.FC<HangmanComponentProps> = ({ gameIndex }) => {
   }
 
 
+  const sendChat = (message: string) => {
+    webSocket?.send("c:" + message)
+  }
 
   const sendGuess = (letter: string) => {
     webSocket?.send("g:" + letter);
@@ -380,6 +392,9 @@ const HangmanComponent: React.FC<HangmanComponentProps> = ({ gameIndex }) => {
       </div>
       {
         letterGrid()
+      }
+      {
+        chats()
       }
     </div>
   );

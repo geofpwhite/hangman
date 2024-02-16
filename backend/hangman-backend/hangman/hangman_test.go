@@ -1,21 +1,16 @@
+/*
+test functions
+*/
 package hangman
 
-import "fmt"
+import (
+	"fmt"
+	"testing"
+)
 
-/*
-test function
-*/
-func test() {
+func TestOnePersonOneGame(t *testing.T) {
 	gState := newGame()
-	gState.newPlayer(player{username: "player 1"})
-	gState.newWord("phantom")
-	gState.guess('a')
-	gState.newPlayer(player{username: "player 2"})
-	fmt.Println(gState)
-}
-
-func onePersonByThemself() {
-	gState := newGame()
+	original := *gState
 	gState.newPlayer(player{username: "player 1"})
 	gState.newWord("phantom")
 	gState.guess('a')
@@ -23,7 +18,15 @@ func onePersonByThemself() {
 	gState.guess('j')
 	gState.guess('p')
 	gState.guess('h')
-	fmt.Println(gState)
+	original.guessed = "ajph"
+
+	// Example assertion
+	if gState.winner != -1 {
+		t.Errorf("Expected winner to be HOST_LOSES, got %d", gState.winner)
+	}
+	if original.guessed != gState.guessed {
+		t.Errorf("Expected guessed to be 'ajph', got %s", gState.guessed)
+	}
 }
 func twoPlayers() {
 	gState := newGame()
@@ -35,6 +38,7 @@ func twoPlayers() {
 	gState.guess('p')
 	gState.guess('h')
 	fmt.Println(gState)
+
 }
 func twoGamesMultiplePlayers() {
 

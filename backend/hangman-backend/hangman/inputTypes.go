@@ -10,25 +10,21 @@ type usernameInput struct {
 	GameIndex   int
 	PlayerIndex int
 }
-
 type newWordInput struct {
 	NewWord     string
 	GameIndex   int
 	PlayerIndex int
 }
-
 type guessInput struct {
 	Guess       string
 	GameIndex   int
 	PlayerIndex int
 }
-
 type chatInput struct {
 	Message     string
 	GameIndex   int
 	PlayerIndex int
 }
-
 type ruleChangeInput struct {
 }
 
@@ -77,6 +73,8 @@ func (gi *guessInput) GetGameIndex() int {
 func (gi *guessInput) GetPlayerIndex() int {
 	return gi.PlayerIndex
 }
+
+// call guess and add to output accordingly
 func (gi *guessInput) ChangeStateAccordingToInput(outputChannel chan clientState) {
 	if len(gStates) <= gi.GameIndex {
 		return
@@ -95,6 +93,7 @@ func (gi *guessInput) ChangeStateAccordingToInput(outputChannel chan clientState
 		outputChannel <- clientState{Warning: "not your turn", PlayerIndex: gi.PlayerIndex}
 	}
 }
+
 func (ci *chatInput) GetGameIndex() int {
 	return ci.GameIndex
 }

@@ -1,0 +1,68 @@
+body {
+  margin: 0 auto;
+  max-width: 800px;
+  padding: 0 20px;
+}
+
+.container {
+  border: 2px solid #dedede;
+  background-color: transparent;
+  border-radius: 5px;
+  padding: 10px;
+  margin: 10px 0;
+}
+
+.darker {
+  border-color: #ccc;
+  background-color: #ddd;
+}
+
+.container::after {
+  content: "";
+  clear: both;
+  display: table;
+}
+
+.container img {
+  float: left;
+  max-width: 60px;
+  width: 100%;
+  margin-right: 20px;
+  border-radius: 50%;
+}
+
+.container img.right {
+  float: right;
+  margin-left: 20px;
+  margin-right: 0;
+}
+
+.time-right {
+  float: right;
+  color: #000;
+}
+
+.time-left {
+  float: left;
+  color: #000;
+}
+
+.chat-sidebar {
+  position: fixed;
+  top: 0;
+  right: 0;
+  width: 300px;
+  /* Adjust the width as needed */
+  height: 100%;
+  /* Fill the entire height of the viewport */
+  background-color: transparent;
+  overflow-y: auto;
+  /* Enable vertical scrolling if content overflows */
+  padding: 10px;
+  box-sizing: border-box;
+  border-left: 1px solid #ddd;
+  /* Add a border to separate from the main content */
+}
+
+
+/* Add any other styles as needed */
