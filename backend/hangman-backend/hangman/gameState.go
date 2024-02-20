@@ -173,8 +173,6 @@ func (gState *gameState) closeGame() {
 }
 
 func (gState *gameState) removePlayer(playerIndex int) {
-	// playerIndex := removePlayer[1]
-
 	gState.mut.Lock()
 	defer gState.mut.Unlock()
 	gState.players = slices.Delete(gState.players, playerIndex, playerIndex+1)

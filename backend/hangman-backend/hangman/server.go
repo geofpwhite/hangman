@@ -2,15 +2,12 @@ package hangman
 
 import (
 	"fmt"
+	"github.com/gin-gonic/gin"
+	"github.com/gorilla/websocket"
 	"log"
 	"net/http"
 	"slices"
-
-	// "slices"
 	"strconv"
-
-	"github.com/gin-gonic/gin"
-	"github.com/gorilla/websocket"
 )
 
 var upgrader = websocket.Upgrader{
@@ -152,6 +149,8 @@ func server(inputChannel chan input, timeoutChannel chan int, outputChannel chan
 	go outputLoop(timeoutChannel, outputChannel)
 	gin.SetMode(gin.ReleaseMode)
 	r.Run("localhost:8080") // listen and serve on 0.0.0.0:8080 (for windows "localhost:8080")
+
+	// r.RunTLS("localhost:8080") // listen and serve on 0.0.0.0:8080 (for windows "localhost:8080")
 }
 
 func outputLoop(

@@ -34,11 +34,11 @@ type clientState struct {
 
 func Run() {
 	newGame()
-	inputChannel := make(chan (input))
-	outputChannel := make(chan (clientState))
-	timeoutChannel := make(chan (int))
-	closeGameChannel := make(chan (int))
-	newGameChannel := make(chan (bool))
+	inputChannel := make(chan input)
+	outputChannel := make(chan clientState)
+	timeoutChannel := make(chan int)
+	closeGameChannel := make(chan int)
+	newGameChannel := make(chan bool)
 	removePlayerChannel := make(chan [2]int)
 	os.Remove("app.log")
 	file, _ := os.OpenFile("app.log", os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0666)

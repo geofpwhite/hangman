@@ -28,11 +28,14 @@ interface HangmanComponentProps {
 const HangmanComponent: React.FC<HangmanComponentProps> = ({ gameIndex }) => {
   const [webSocket, setWebSocket] = useState<WebSocket | null>(null);
   const [gameState, setGameState] = useState<GameState>();
+  const [openChat, setOpenChat] = useState<boolean>(false);
   const [usernameInputValue, setInputValue] = useState('');
   const [newWordInputValue, setInputValue2] = useState('');
+  const [wantsToChangeUsername, setWantsToChangeUsername] = useState<boolean>(false);
   const alphabet: string = "abcdefghijklmnopqrstuvwxyz";
   useEffect(() => {
-    const ws = new WebSocket('ws://localhost:8080/ws/' + gameIndex);
+    const ws = new WebSocket('wss://hangman-backend-geoffrey.com/ws/' + gameIndex);
+    // const ws = new WebSocket('ws://18.189.248.181:8080/ws/' + gameIndex)
 
     ws.onopen = () => {
       console.log('WebSocket connection opened');
@@ -64,8 +67,11 @@ const HangmanComponent: React.FC<HangmanComponentProps> = ({ gameIndex }) => {
   const chats = () => {
     if (gameState) {
       return (
-
-        <Chat chats={gameState.chatLogs} sendMessage={sendChat} players={gameState.players} playerIndex={gameState.playerIndex}></Chat>
+        <Chat chats={gameState.chatLogs} sendMessage={sendChat} players={gameState.players} playerIndex={gameState.playerIndex} openChat={openChat}></Chat>
+      )
+    } else {
+      return (
+        <div />
       )
     }
   }
@@ -170,7 +176,8 @@ const HangmanComponent: React.FC<HangmanComponentProps> = ({ gameIndex }) => {
         <div>
           <div className="new-word">
             <div>
-              <label htmlFor="newWord">We need a new word </label>
+              <label htmlFor="newWord">
+                We need a new word </label>
               <input
                 type="text"
                 id="myInput"
@@ -181,7 +188,6 @@ const HangmanComponent: React.FC<HangmanComponentProps> = ({ gameIndex }) => {
               <button type="button" onClick={sendNewWord}>Submit</button>
             </div>
           </div>
-
         </div>
       )
     }
@@ -242,7 +248,6 @@ const HangmanComponent: React.FC<HangmanComponentProps> = ({ gameIndex }) => {
   }
 
 
-  const [wantsToChangeUsername, setWantsToChangeUsername] = useState<boolean>(false);
 
   const usernameInputBox = () => {
     if (wantsToChangeUsername) {
@@ -303,9 +308,7 @@ const HangmanComponent: React.FC<HangmanComponentProps> = ({ gameIndex }) => {
         return "You Won"
       }
     } else {
-
       return (gameState?.guessesLeft + " Guesses Left")
-
     }
   }
 
@@ -393,6 +396,7 @@ const HangmanComponent: React.FC<HangmanComponentProps> = ({ gameIndex }) => {
       {
         letterGrid()
       }
+      <button type="button" onClick={() => { setOpenChat(!openChat) }}>Toggle Chat</button>
       {
         chats()
       }

@@ -1,21 +1,26 @@
 import React, { useEffect, useState } from 'react';
 import './App.css';
 import HangmanComponent from './hangman';
-import axios from 'axios'
-
+import axios, { Axios } from 'axios'
+export const TabTitle = (newTitle: string) => {
+  return (document.title = newTitle);
+};
 
 
 
 
 function App() {
-  const url = "http://localhost:8080"
+  const _url = "https://hangman-backend-geoffrey.com"
+  // const _url = "http://18.189.248.181:8080"
 
   const [gameChoice, setGameChoice] = useState<number>(-1)
   const [games, setGames] = useState<number>(-1)
+  TabTitle("Geoffrey's Hangman Server")
 
   useEffect(
     () => {
-      axios.get(url + '/get_games').then((response) => {
+
+      axios.get(_url + '/get_games',).then((response) => {
         console.log("response\n" + response)
         setGames(response.data)
       })
@@ -23,7 +28,7 @@ function App() {
     }, []
   )
   const sendNewGame = () => {
-    fetch(url + "/new_game").then((response: any) => {
+    fetch(_url + "/new_game").then((response: any) => {
       response.json().then((obj: { length: number }) => {
         setGames(obj.length)
       })
