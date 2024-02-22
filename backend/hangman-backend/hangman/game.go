@@ -39,7 +39,9 @@ func cleanupFunction(closeGameChannel chan int) {
 
 	for range ticker.C {
 		for i := range gStates {
+
 			if gStates[i] == nil || len(gStates[i].players) == 0 || gStates[i].consecutiveTimeouts >= len(gStates[i].players) {
+
 				closeGameChannel <- i
 			}
 		}
