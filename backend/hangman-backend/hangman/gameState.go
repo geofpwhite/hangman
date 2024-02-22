@@ -16,19 +16,20 @@ type chatLog struct {
 }
 
 type gameState struct {
-	wordCheck    *sql.DB
-	currentWord  string
-	revealedWord string
-	guessed      string
-	players      []player
-	curHostIndex int
-	turn         int
-	guessesLeft  int
-	needNewWord  bool
-	winner       int
-	gameIndex    int
-	mut          *sync.Mutex
-	chatLogs     []chatLog
+	wordCheck           *sql.DB
+	currentWord         string
+	revealedWord        string
+	guessed             string
+	players             []player
+	curHostIndex        int
+	turn                int
+	guessesLeft         int
+	needNewWord         bool
+	winner              int
+	gameIndex           int
+	mut                 *sync.Mutex
+	chatLogs            []chatLog
+	consecutiveTimeouts int
 }
 
 func newGame() *gameState {
@@ -54,7 +55,7 @@ starts a ticker that either times out the current turn and increments it, or res
 */
 func (gState *gameState) runTicker(timeoutChannel chan int, inputChannel chan inputInfo, closeGameChannel chan int) {
 	ticker := time.NewTicker(60 * time.Second)
-	timeoutsInARow := 0
+	gState.consecutiveTimeouts = 0
 	defer ticker.Stop()
 	defer close(inputChannel) // this may be bad practice to close from the reader side but
 
@@ -64,8 +65,8 @@ func (gState *gameState) runTicker(timeoutChannel chan int, inputChannel chan in
 			log.Println("ticker")
 
 			timeoutChannel <- (*gState).gameIndex
-			timeoutsInARow++
-			if timeoutsInARow >= len(gState.players) {
+			gState.consecutiveTimeouts++
+			if gState.consecutiveTimeouts >= len(gState.players) {
 				closeGameChannel <- gState.gameIndex
 			}
 
@@ -79,7 +80,7 @@ func (gState *gameState) runTicker(timeoutChannel chan int, inputChannel chan in
 				ticker.Stop()
 				ticker = time.NewTicker(60 * time.Second)
 				fmt.Println("ticker reset")
-				timeoutsInARow = 0
+				gState.consecutiveTimeouts = 0
 			}
 			// ticker = time.NewTicker(1 * time.Second)
 		}

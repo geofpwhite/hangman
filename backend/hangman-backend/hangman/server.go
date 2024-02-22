@@ -2,19 +2,14 @@ package hangman
 
 import (
 	"fmt"
-	"github.com/gin-gonic/gin"
-	"github.com/gorilla/websocket"
 	"log"
 	"net/http"
 	"slices"
 	"strconv"
-)
 
-var upgrader = websocket.Upgrader{
-	CheckOrigin: func(r *http.Request) bool {
-		return true
-	},
-}
+	"github.com/gin-gonic/gin"
+	"github.com/gorilla/websocket"
+)
 
 func handleWebSocket(
 	conn *websocket.Conn,
@@ -107,9 +102,13 @@ func handleWebSocket(
 }
 
 func server(inputChannel chan input, timeoutChannel chan int, outputChannel chan clientState, newGameChannel chan bool, closeGameChannel chan int, removePlayerChannel chan [2]int) {
+	var upgrader = websocket.Upgrader{
+		CheckOrigin: func(r *http.Request) bool {
+			return true
+		},
+	}
 	r := gin.Default()
 	r.Use(func(c *gin.Context) {
-		c.Header("Permissions-Policy", "accelerometer=(), camera=(), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), payment=(), usb=()")
 		c.Writer.Header().Set("Access-Control-Allow-Origin", "*")
 		// Handle preflight requests
 		if c.Request.Method == "OPTIONS" {
