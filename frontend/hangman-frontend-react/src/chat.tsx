@@ -19,7 +19,7 @@ const ChatMessages: React.FC<ChatProps> = ({ chats, sendMessage, players, player
   const handleChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     setInputValue(event.target.value);
   };
-  const divs = chats.map((element: chatMessage, _index: number) => {
+  const chatMessages = chats.map((element: chatMessage, _index: number) => {
     if (element.sender === players[playerIndex]) {
       return (
         <div className="container">
@@ -43,7 +43,7 @@ const ChatMessages: React.FC<ChatProps> = ({ chats, sendMessage, players, player
       <div className="chat-sidebar"> {/* Add a class to style the chat box container */}
         <h2>Chat Messages</h2>
         {
-          divs
+          chatMessages
         }
         <input
           value={messageValue}

@@ -204,11 +204,13 @@ func (gState *gameState) changeUsername(playerIndex int, newUsername string) {
 	log.Println("change username")
 	gState.mut.Lock()
 	defer gState.mut.Unlock()
-	oldUsername := gState.players[playerIndex].username
-	gState.players[playerIndex].username = newUsername
-	for i, chat := range gState.chatLogs {
-		if chat.Sender == oldUsername {
-			gState.chatLogs[i].Sender = newUsername
+	if slices.IndexFunc(gState.players, func(p player) bool { return p.username == newUsername }) == -1 {
+		oldUsername := gState.players[playerIndex].username
+		gState.players[playerIndex].username = newUsername
+		for i, chat := range gState.chatLogs {
+			if chat.Sender == oldUsername {
+				gState.chatLogs[i].Sender = newUsername
+			}
 		}
 	}
 }

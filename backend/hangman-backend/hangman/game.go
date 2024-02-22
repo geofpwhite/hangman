@@ -20,7 +20,7 @@ type player struct {
 // var gState serverState = serverState{}
 var gStates []*gameState = []*gameState{}
 
-func validatePlayerIndexAndGameIndex(gameIndex, playerIndex int) bool {
+func validateGameIndexAndPlayerIndex(gameIndex, playerIndex int) bool {
 	if gameIndex >= len(gStates) || gameIndex < 0 {
 		return false
 	}
@@ -62,7 +62,7 @@ func game(
 		select {
 		case removePlayer := <-removePlayerChannel:
 			log.Println("removePlayerChannel")
-			if validatePlayerIndexAndGameIndex(removePlayer[0], removePlayer[1]) {
+			if validateGameIndexAndPlayerIndex(removePlayer[0], removePlayer[1]) {
 				playerIndex := removePlayer[1]
 				gState := gStates[removePlayer[0]]
 				if len(gState.players) <= 1 {
@@ -97,11 +97,9 @@ func game(
 
 		case info := <-inputChannel:
 			log.Println("input channel")
-			if validatePlayerIndexAndGameIndex(info.GetGameIndex(), info.GetPlayerIndex()) {
-				tickerInputChannels[info.GetGameIndex()] <- inputInfo{PlayerIndex: info.GetPlayerIndex()}
-				log.Println(info)
-				go info.ChangeStateAccordingToInput(outputChannel)
-			}
+			tickerInputChannels[info.GetGameIndex()] <- inputInfo{PlayerIndex: info.GetPlayerIndex()}
+			log.Println(info)
+			go info.ChangeStateAccordingToInput(outputChannel)
 		}
 	}
 }

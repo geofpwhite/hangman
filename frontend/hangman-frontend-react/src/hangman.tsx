@@ -56,6 +56,7 @@ const HangmanComponent: React.FC<HangmanComponentProps> = ({ gameIndex }) => {
 
     ws.onclose = () => {
       console.log('WebSocket connection closed');
+      setGameState(undefined)
     };
 
     setWebSocket(ws);
@@ -64,6 +65,7 @@ const HangmanComponent: React.FC<HangmanComponentProps> = ({ gameIndex }) => {
       ws.close();
     };
   }, []); // Empty dependency array ensures this effect runs only once
+
   const chats = () => {
     if (gameState) {
       return (
