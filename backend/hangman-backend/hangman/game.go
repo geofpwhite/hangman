@@ -2,8 +2,10 @@ package hangman
 
 import (
 	// "fmt"
+
 	"log"
 	"slices"
+	"time"
 
 	"github.com/gorilla/websocket"
 	_ "github.com/mattn/go-sqlite3"
@@ -31,6 +33,22 @@ func validateGameIndexAndPlayerIndex(gameIndex, playerIndex int) bool {
 	return true
 }
 
+func cleanupFunction(closeGameChannel chan int) {
+	ticker := time.NewTicker(5 * time.Minute)
+	defer ticker.Stop()
+
+	for range ticker.C {
+		for i := range gStates {
+
+			if gStates[i] == nil || len(gStates[i].players) == 0 || gStates[i].consecutiveTimeouts >= len(gStates[i].players) {
+
+				closeGameChannel <- i
+			}
+		}
+	}
+
+}
+
 func game(
 	inputChannel chan input,
 	timeoutChannel chan int,
@@ -46,6 +64,7 @@ func game(
 		tickerInputChannel := make(chan (inputInfo))
 		tickerInputChannels = append(tickerInputChannels, tickerInputChannel)
 	}
+	go cleanupFunction(closeGameChannel)
 	go gStates[0].runTicker(tickerTimeoutChannel, tickerInputChannels[0], closeGameChannel)
 	go func() {
 		for gameIndex := range closeGameChannel {
