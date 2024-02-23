@@ -15,7 +15,6 @@ import GRATEFUL from "./grateful.jpeg"
 import Chat from './chat';
 
 
-
 const HOST_WINS = 1
 const HOST_LOSES = 2
 const guessesLeftImages = [GAME_OVER, LEFT1, LEFT2, LEFT3, LEFT4, LEFT5, LEFT6, LEFT7, LEFT8, LEFT9]
@@ -122,7 +121,9 @@ const HangmanComponent: React.FC<HangmanComponentProps> = ({ gameIndex }) => {
   };
 
   const changeUsername = () => {
-    webSocket?.send("u:" + usernameInputValue);
+    if (usernameInputValue.length <= 20) {
+      webSocket?.send("u:" + usernameInputValue);
+    }
     setInputValue('');
     setWantsToChangeUsername(false)
   };
@@ -339,7 +340,7 @@ const HangmanComponent: React.FC<HangmanComponentProps> = ({ gameIndex }) => {
     return (
       <p>
         {
-          gameState?.lettersGuessed.split("").map((letter: string, id: number) => {
+          gameState?.lettersGuessed.split("").map((letter: string, _: number) => {
             return (
               <span id="letters-guessed" style={{ color: determineColor(letter) }}>
                 {letter}
@@ -398,7 +399,10 @@ const HangmanComponent: React.FC<HangmanComponentProps> = ({ gameIndex }) => {
       {
         letterGrid()
       }
-      <button type="button" onClick={() => { setOpenChat(!openChat) }}>Toggle Chat</button>
+      <button type="button"
+        onClick={() => { setOpenChat(!openChat) }}
+      >Toggle Chat
+      </button>
       {
         chats()
       }

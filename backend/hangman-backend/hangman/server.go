@@ -109,7 +109,6 @@ func handleWebSocket(
 func server(inputChannel chan input, timeoutChannel chan int, outputChannel chan clientState, newGameChannel chan bool, closeGameChannel chan int, removePlayerChannel chan [2]int) {
 	r := gin.Default()
 	r.Use(func(c *gin.Context) {
-		c.Header("Permissions-Policy", "accelerometer=(), camera=(), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), payment=(), usb=()")
 		c.Writer.Header().Set("Access-Control-Allow-Origin", "*")
 		// Handle preflight requests
 		if c.Request.Method == "OPTIONS" {

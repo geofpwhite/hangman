@@ -19,12 +19,10 @@ function App() {
 
   useEffect(
     () => {
-
       axios.get(_url + '/get_games',).then((response) => {
         console.log("response\n" + response)
         setGames(response.data)
       })
-
     }, []
   )
   const sendNewGame = () => {
