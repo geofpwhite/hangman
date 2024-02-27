@@ -3,13 +3,31 @@ package hangman
 import (
 	"fmt"
 	"log"
+	"math/rand"
 	"net/http"
 	"slices"
 	"strconv"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/gorilla/websocket"
 )
+
+var hashes map[string]*player = map[string]*player{}
+
+/*
+Create random hash string for user
+*/
+func Hash(length int) string {
+	const charset = "abcdefghijklmnopqrstuvwxyz"
+	seededRand := rand.New(rand.NewSource(time.Now().UnixNano()))
+
+	b := make([]byte, length)
+	for i := range b {
+		b[i] = charset[seededRand.Intn(len(charset))]
+	}
+	return string(b)
+}
 
 func handleWebSocket(
 	conn *websocket.Conn,
@@ -19,12 +37,51 @@ func handleWebSocket(
 	closeGameChannel chan int,
 	removePlayerChannel chan [2]int,
 	gState *gameState,
+	reconnect bool,
+	hash string,
 ) {
 	// first thing to do when we have a new connection is tell them the current game state
 
-	playerIndex := len(gState.players)
-	newPlayer := player{username: "Player " + strconv.Itoa(playerIndex+1), connection: conn}
-	gState.newPlayer(newPlayer)
+	log.Println("reconnect is ", reconnect)
+	var playerIndex int
+	if reconnect {
+		_player := hashes[hash]
+		if _player != nil {
+			_player.connection = conn
+			playerIndex = slices.IndexFunc(gState.players, func(p player) bool { return p == *_player })
+			if playerIndex == -1 {
+				conn.WriteJSON(clientState{Hash: ""})
+			}
+		}
+
+	} else {
+		playerIndex = len(gState.players)
+		newPlayer := player{username: "Player " + strconv.Itoa(playerIndex+1), connection: conn}
+		playerHash := Hash(32)
+		gState.newPlayer(newPlayer)
+
+		hashes[playerHash] = &gState.players[playerIndex]
+		usernames := []string{}
+		for _, p := range gState.players {
+			usernames = append(usernames, p.username)
+		}
+		newPlayer.connection.WriteJSON(clientState{
+			Players:        usernames,
+			Turn:           gState.turn,
+			Host:           gState.curHostIndex,
+			RevealedWord:   gState.revealedWord,
+			GuessesLeft:    gState.guessesLeft,
+			LettersGuessed: gState.guessed,
+			NeedNewWord:    gState.needNewWord,
+			Warning:        "",
+			PlayerIndex:    playerIndex,
+			Winner:         gState.winner,
+			GameIndex:      gState.gameIndex,
+			ChatLogs:       gState.chatLogs,
+			Hash:           playerHash,
+		})
+
+	}
 	// gState.connections = append(gState.connections, conn)
 	defer func() {
 		conn.Close()
@@ -61,7 +118,8 @@ func handleWebSocket(
 			if index == -1 {
 				return
 			}
-			removePlayerChannel <- [2]int{gState.gameIndex, index}
+			// removePlayerChannel <- [2]int{gState.gameIndex, index}
+
 			return
 		}
 		i := inputInfo{
@@ -69,10 +127,6 @@ func handleWebSocket(
 			PlayerIndex: slices.IndexFunc(gState.players, func(p player) bool {
 				return p.connection == conn
 			}),
-		}
-		if err != nil {
-			fmt.Println(err)
-			return
 		}
 		switch messageType {
 		case websocket.TextMessage:
@@ -123,6 +177,66 @@ func server(inputChannel chan input, timeoutChannel chan int, outputChannel chan
 	r.GET("/get_games", func(c *gin.Context) {
 		c.String(http.StatusOK, strconv.Itoa(len(gStates)))
 	})
+
+	r.GET("/reconnect/:playerHash", func(c *gin.Context) {
+		playerHash, b := c.Params.Get("playerHash")
+		if !b {
+			return
+		}
+		conn, err := upgrader.Upgrade(c.Writer, c.Request, nil)
+		if err != nil {
+			fmt.Println(err)
+			conn.Close()
+			return
+		}
+		gameIndex := -1
+		for i := range gStates {
+			if index := slices.IndexFunc(gStates[i].players, func(p player) bool { return p == *hashes[playerHash] }); index != -1 {
+				gameIndex = i
+				break
+			}
+		}
+		if gameIndex >= 0 {
+			handleWebSocket(conn, inputChannel, timeoutChannel, outputChannel, closeGameChannel, removePlayerChannel, gStates[gameIndex], true, playerHash)
+		} else {
+			c.String(http.StatusOK, "failed")
+		}
+
+	})
+
+	r.GET("/valid/:playerHash", func(c *gin.Context) {
+		hash, _ := c.Params.Get("playerHash")
+		if hashes[hash] == nil {
+			c.String(http.StatusOK, "-1")
+		} else {
+			var gameIndex int
+			for i, g := range gStates {
+				for _, p := range g.players {
+					if p == *hashes[hash] {
+						gameIndex = i
+					}
+				}
+			}
+			c.String(http.StatusOK, strconv.Itoa(gameIndex))
+		}
+	})
+
+	r.GET("/exit_game/:playerHash/:gameIndex", func(c *gin.Context) {
+		defer c.String(http.StatusOK, "ok")
+		playerHash, _ := c.Params.Get("playerHash")
+		str, _ := c.Params.Get("gameIndex")
+		gameIndex, err := strconv.Atoi(str)
+		if err != nil {
+			panic("ahhhhh")
+		}
+		_player := hashes[playerHash]
+		if _player == nil {
+			return
+		}
+		playerIndex := slices.IndexFunc(gStates[gameIndex].players, func(p player) bool { return p == *_player })
+		delete(hashes, playerHash)
+		removePlayerChannel <- [2]int{gameIndex, playerIndex}
+	})
 	r.GET("/ws/:gameIndex", func(c *gin.Context) {
 		str, b := c.Params.Get("gameIndex")
 		if !b {
@@ -142,7 +256,7 @@ func server(inputChannel chan input, timeoutChannel chan int, outputChannel chan
 			conn.Close()
 			return
 		}
-		handleWebSocket(conn, inputChannel, timeoutChannel, outputChannel, closeGameChannel, removePlayerChannel, gStates[gameIndex])
+		handleWebSocket(conn, inputChannel, timeoutChannel, outputChannel, closeGameChannel, removePlayerChannel, gStates[gameIndex], false, "")
 		// Handle WebSocket connections here
 	})
 

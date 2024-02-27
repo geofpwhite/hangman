@@ -110,7 +110,7 @@ func TestTwoPeopleOneGame(t *testing.T) {
 
 	// Example assertion
 	if gState.winner != -1 {
-		t.Errorf("Expected winner to be HOST_LOSES, got %d", gState.winner)
+		t.Errorf("Expected winner to be -1, got %d", gState.winner)
 	}
 	if original.guessed != gState.guessed {
 		t.Errorf("Expected guessed to be 'ajph', got %s", gState.guessed)

@@ -1,7 +1,10 @@
 package hangman
 
+/*
+Interface implemented by user input objects to be accepted by game loop
+*/
 type input interface {
-	ChangeStateAccordingToInput(outputChannel chan clientState)
+	ChangeStateAccordingToInput(chan clientState)
 	GetGameIndex() int
 	GetPlayerIndex() int
 }
@@ -52,8 +55,8 @@ func (nwi *newWordInput) ChangeStateAccordingToInput(outputChannel chan clientSt
 	if validateGameIndexAndPlayerIndex(nwi.GameIndex, nwi.PlayerIndex) {
 		gState := gStates[nwi.GameIndex]
 
-		if (*gState).needNewWord && nwi.PlayerIndex == (*gState).curHostIndex {
-			(*gState).newWord(nwi.NewWord)
+		if gState.needNewWord && nwi.PlayerIndex == gState.curHostIndex {
+			gState.newWord(nwi.NewWord)
 			outputChannel <- clientState{GameIndex: gState.gameIndex}
 		} else {
 			outputChannel <- clientState{Warning: "you can't pick the word right now", PlayerIndex: nwi.PlayerIndex}
@@ -67,13 +70,12 @@ func (gi *guessInput) GetPlayerIndex() int {
 	return gi.PlayerIndex
 }
 
-// call guess and add to output accordingly
 func (gi *guessInput) ChangeStateAccordingToInput(outputChannel chan clientState) {
 	if validateGameIndexAndPlayerIndex(gi.GameIndex, gi.PlayerIndex) {
 		gState := gStates[gi.GameIndex]
-		if gi.PlayerIndex == (*gState).turn {
+		if gi.PlayerIndex == gState.turn {
 			// fmt.Println("guess")
-			output, changedParts := (*gState).guess(rune(gi.Guess[0]))
+			output, changedParts := gState.guess(rune(gi.Guess[0]))
 			if output {
 				outputChannel <- changedParts
 			}

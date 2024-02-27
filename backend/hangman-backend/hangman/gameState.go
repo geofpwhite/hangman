@@ -174,9 +174,15 @@ func (gState *gameState) closeGame() {
 }
 
 func (gState *gameState) removePlayer(playerIndex int) {
+	if len(gState.players) == 0 {
+		return
+	}
 	gState.mut.Lock()
 	defer gState.mut.Unlock()
 	gState.players = slices.Delete(gState.players, playerIndex, playerIndex+1)
+	if len(gState.players) == 0 {
+		return
+	}
 	gState.turn = gState.turn % len(gState.players)
 	gState.curHostIndex = gState.curHostIndex % len(gState.players)
 	if gState.needNewWord && gState.curHostIndex != gState.turn {

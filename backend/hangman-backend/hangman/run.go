@@ -30,6 +30,7 @@ type clientState struct {
 	Winner         int       `json:"winner"`
 	GameIndex      int       `json:"gameIndex"`
 	ChatLogs       []chatLog `json:"chatLogs"`
+	Hash           string    `json:"hash"`
 }
 
 func Run() {

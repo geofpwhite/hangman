@@ -1,6 +1,5 @@
 {
   "name": "hangman",
-  "homepage": "https://geofpwhite.github.io/hangman",
   "version": "0.1.0",
   "private": true,
   "dependencies": {
@@ -14,6 +13,7 @@
     "axios": "^1.6.7",
     "gh-pages": "^6.1.1",
     "http": "^0.0.1-security",
+    "js-cookie": "^3.0.5",
     "move": "^0.4.9",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
@@ -46,5 +46,8 @@
       "last 1 firefox version",
       "last 1 safari version"
     ]
+  },
+  "devDependencies": {
+    "@types/js-cookie": "^3.0.6"
   }
 }

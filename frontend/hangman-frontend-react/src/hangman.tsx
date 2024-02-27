@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import axios from 'axios';
 import "./hangman.css";
 import { Game, GameState } from './game';
 import GAME_OVER from "./game_over.png";
@@ -22,19 +23,56 @@ var game = new Game()
 
 interface HangmanComponentProps {
   gameIndex: number
+  reconnect: boolean
+  hash: string
+  reset: () => void
 }
 
-const HangmanComponent: React.FC<HangmanComponentProps> = ({ gameIndex }) => {
+
+const HangmanComponent: React.FC<HangmanComponentProps> = ({ gameIndex, reconnect, hash, reset }) => {
   const [webSocket, setWebSocket] = useState<WebSocket | null>(null);
   const [gameState, setGameState] = useState<GameState>();
   const [openChat, setOpenChat] = useState<boolean>(false);
   const [usernameInputValue, setInputValue] = useState('');
   const [newWordInputValue, setInputValue2] = useState('');
   const [wantsToChangeUsername, setWantsToChangeUsername] = useState<boolean>(false);
+  const [newHash, setHash] = useState<string>('')
   const alphabet: string = "abcdefghijklmnopqrstuvwxyz";
+  console.log(gameIndex, reconnect, hash)
+
+
+  const _url = "http://localhost:8080"
+  const exitGameButton = () => {
+    console.log(hash)
+    return (
+      <div style={{ position: "absolute" }}>
+        <button onClick={() => {
+          exitGame(gameIndex)
+        }}>Exit Game</button>
+      </div>
+    )
+  }
+  const exitGame = (gameIndex: number) => {
+    console.log("hash  " + newHash)
+    let nhash = newHash
+    if (newHash === '') {
+      nhash = hash
+    }
+
+    axios.get(_url + '/exit_game/' + nhash + '/' + gameIndex,).then((response) => {
+      console.log("response\n" + response)
+      reset()
+    })
+  }
+
   useEffect(() => {
-    const ws = new WebSocket('wss://hangman-backend-geoffrey.com/ws/' + gameIndex);
-    // const ws = new WebSocket('ws://18.189.248.181:8080/ws/' + gameIndex)
+    // const ws = new WebSocket('wss://hangman-backend-geoffrey.com/ws/' + gameIndex);
+    var ws: WebSocket
+    if (reconnect) {
+      ws = new WebSocket('ws://localhost:8080/reconnect/' + hash)
+    } else {
+      ws = new WebSocket('ws://localhost:8080/ws/' + gameIndex)
+    }
 
     ws.onopen = () => {
       console.log('WebSocket connection opened');
@@ -46,6 +84,9 @@ const HangmanComponent: React.FC<HangmanComponentProps> = ({ gameIndex }) => {
         setGameState(() => {
           // Update the state based on the previous state
           game.fromGameState(obj);
+          if (obj.hash !== '' && !reconnect) {
+            setHash(obj.hash)
+          }
           return { ...game.state };
         });
       } catch (error) {
@@ -55,13 +96,13 @@ const HangmanComponent: React.FC<HangmanComponentProps> = ({ gameIndex }) => {
 
     ws.onclose = () => {
       console.log('WebSocket connection closed');
-      setGameState(undefined)
     };
 
     setWebSocket(ws);
 
     return () => {
       ws.close();
+
     };
   }, []); // Empty dependency array ensures this effect runs only once
 
@@ -354,6 +395,9 @@ const HangmanComponent: React.FC<HangmanComponentProps> = ({ gameIndex }) => {
 
   return (
     <div>
+      {
+        exitGameButton()
+      }
       {
         drawHangMan()
       }

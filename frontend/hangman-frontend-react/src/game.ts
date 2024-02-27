@@ -1,3 +1,4 @@
+import { setHashCookie } from "./App"
 import { chatMessage } from "./chat"
 
 export interface GameState {
@@ -12,6 +13,7 @@ export interface GameState {
   winner: number
   gameIndex: number
   chatLogs: Array<chatMessage>
+  hash: string
 }
 export class Game {
   state: GameState = {
@@ -27,10 +29,16 @@ export class Game {
     winner: -1,
     gameIndex: -1,
     chatLogs: [],
+    hash: "",
 
   }
 
+
   fromGameState(gs: GameState) {
+    if (gs.hash !== "") {
+      this.state.hash = gs.hash
+      setHashCookie(gs.hash)
+    }
     if (gs.needNewWord != null) {
       this.state.needNewWord = gs.needNewWord
     }
