@@ -35,9 +35,14 @@ export class Game {
 
 
   fromGameState(gs: GameState) {
+    console.log(gs)
     if (gs.hash !== "") {
       this.state.hash = gs.hash
       setHashCookie(gs.hash)
+    }
+    if (gs.hash === "undefined") {
+      this.state.hash = ''
+      setHashCookie('')
     }
     if (gs.needNewWord != null) {
       this.state.needNewWord = gs.needNewWord
