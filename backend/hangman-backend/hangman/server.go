@@ -125,12 +125,6 @@ func handleWebSocket(
 	for {
 		messageType, p, err := conn.ReadMessage()
 		if err != nil {
-			index := slices.IndexFunc(gState.players, func(p player) bool { return p.hash == hash })
-			if index == -1 {
-				return
-			}
-			// removePlayerChannel <- [2]int{gState.gameIndex, index}
-
 			return
 		}
 
