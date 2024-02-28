@@ -165,6 +165,9 @@ func (gState *gameState) newWord(word string) {
 func (gState *gameState) closeGame() {
 	gState.mut.Lock()
 	defer gState.mut.Unlock()
+	for _, p := range gState.players {
+		delete(hashes, p.hash)
+	}
 	for i := range gStates[gState.gameIndex+1:] {
 		gStates[i+gState.gameIndex+1].mut.Lock()
 		gStates[i+gState.gameIndex+1].gameIndex--
