@@ -17,6 +17,7 @@ const HOST_LOSES = 2
 type player struct {
 	username   string
 	connection *websocket.Conn
+	hash       string
 }
 
 // var gState serverState = serverState{}
@@ -82,12 +83,6 @@ func game(
 		case removePlayer := <-removePlayerChannel:
 			log.Println("removePlayerChannel")
 			if validateGameIndexAndPlayerIndex(removePlayer[0], removePlayer[1]) {
-				for key, p := range hashes {
-					if *p == gStates[removePlayer[0]].players[removePlayer[1]] {
-						delete(hashes, key)
-						break
-					}
-				}
 				playerIndex := removePlayer[1]
 				gState := gStates[removePlayer[0]]
 				if len(gState.players) <= 1 {
@@ -96,6 +91,9 @@ func game(
 				} else {
 					go func() {
 						gState.removePlayer(playerIndex)
+						if len(gState.players) == 0 {
+							closeGameChannel <- gState.gameIndex
+						}
 						outputChannel <- clientState{GameIndex: gState.gameIndex}
 					}()
 				}

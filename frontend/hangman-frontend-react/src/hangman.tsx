@@ -14,6 +14,7 @@ import LEFT8 from "./8left.png"
 import LEFT9 from "./9left.png"
 import GRATEFUL from "./grateful.jpeg"
 import Chat from './chat';
+import { setHashCookie } from './App';
 
 
 const HOST_WINS = 1
@@ -58,7 +59,7 @@ const HangmanComponent: React.FC<HangmanComponentProps> = ({ gameIndex, reconnec
     if (newHash === '') {
       nhash = hash
     }
-
+    setHashCookie("")
     axios.get(_url + '/exit_game/' + nhash + '/' + gameIndex,).then((response) => {
       console.log("response\n" + response)
       reset()
@@ -83,6 +84,7 @@ const HangmanComponent: React.FC<HangmanComponentProps> = ({ gameIndex, reconnec
         let obj = JSON.parse(event.data);
         setGameState(() => {
           // Update the state based on the previous state
+          console.log(obj + "          obj")
           game.fromGameState(obj);
           if (obj.hash !== '' && !reconnect) {
             setHash(obj.hash)
