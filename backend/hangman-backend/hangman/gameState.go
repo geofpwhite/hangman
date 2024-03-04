@@ -15,6 +15,9 @@ type chatLog struct {
 	Sender  string `json:"sender"`
 }
 
+/*
+struct containing necessary fields for game to run
+*/
 type gameState struct {
 	wordCheck           *sql.DB
 	currentWord         string
@@ -30,6 +33,7 @@ type gameState struct {
 	mut                 *sync.Mutex
 	chatLogs            []chatLog
 	consecutiveTimeouts int
+	randomlyChosen      bool //boolean for methods to check if they need to act differently because the backend randomly chose a word
 }
 
 func newGame() *gameState {
@@ -70,7 +74,6 @@ func (gState *gameState) runTicker(timeoutChannel chan int, inputChannel chan in
 				closeGameChannel <- gState.gameIndex
 			}
 
-			// Send information over the WebSocket connection every 60 seconds
 		case x := <-inputChannel:
 			log.Println("ticker input channel", x)
 			if len((*gState).players) == 0 || x.PlayerIndex == -1 {
@@ -127,7 +130,7 @@ func (gState *gameState) guess(letter rune) (bool, clientState) {
 		} else if !good {
 			gState.guessesLeft--
 			gState.turn = (gState.turn + 1) % len(gState.players)
-			if gState.turn == gState.curHostIndex {
+			if gState.turn == gState.curHostIndex && !gState.randomlyChosen {
 				gState.turn = (gState.turn + 1) % len(gState.players)
 			}
 		}
@@ -137,7 +140,9 @@ func (gState *gameState) guess(letter rune) (bool, clientState) {
 }
 
 func (gState *gameState) randomNewWord() {
-	x, _ := gState.wordCheck.Query("SELECT word FROM words ORDER BY RANDOM() LIMIT 1;")
+	gState.mut.Lock()
+	defer gState.mut.Unlock()
+	x, _ := gState.wordCheck.Query("SELECT word FROM words WHERE LENGTH(word)>5 ORDER BY RANDOM() LIMIT 1;")
 	result := ""
 	if x.Next() {
 		x.Scan(&result)
@@ -153,6 +158,7 @@ func (gState *gameState) randomNewWord() {
 	gState.guessed = ""
 	gState.guessesLeft = 6
 	gState.winner = -1
+	gState.randomlyChosen = true
 	for range result {
 		gState.revealedWord += "_"
 	}
@@ -179,6 +185,7 @@ func (gState *gameState) newWord(word string) {
 	gState.guessed = ""
 	gState.guessesLeft = 6
 	gState.winner = -1
+	gState.randomlyChosen = false
 	for range word {
 		gState.revealedWord += "_"
 	}

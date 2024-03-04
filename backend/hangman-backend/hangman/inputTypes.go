@@ -18,6 +18,11 @@ type newWordInput struct {
 	GameIndex   int
 	PlayerIndex int
 }
+type randomlyChooseWordInput struct {
+	Guess       string
+	GameIndex   int
+	PlayerIndex int
+}
 type guessInput struct {
 	Guess       string
 	GameIndex   int
@@ -96,5 +101,19 @@ func (ci *chatInput) ChangeStateAccordingToInput(outputChannel chan clientState)
 		gState := gStates[ci.GameIndex]
 		gState.chat(ci.Message, ci.PlayerIndex)
 		outputChannel <- clientState{GameIndex: ci.GameIndex}
+	}
+}
+
+func (rcwi *randomlyChooseWordInput) GetGameIndex() int {
+	return rcwi.GameIndex
+}
+func (rcwi *randomlyChooseWordInput) GetPlayerIndex() int {
+	return rcwi.PlayerIndex
+}
+func (rcwi *randomlyChooseWordInput) ChangeStateAccordingToInput(outputChannel chan clientState) {
+	if validateGameIndexAndPlayerIndex(rcwi.GameIndex, rcwi.PlayerIndex) {
+		gState := gStates[rcwi.GameIndex]
+		gState.randomNewWord()
+		outputChannel <- clientState{GameIndex: rcwi.GameIndex}
 	}
 }

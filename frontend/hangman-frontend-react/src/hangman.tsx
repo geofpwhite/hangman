@@ -152,6 +152,10 @@ const HangmanComponent: React.FC<HangmanComponentProps> = ({ gameIndex, reconnec
     webSocket?.send("g:" + letter);
   };
 
+  const sendRandomNewWordRequest = () => {
+    webSocket?.send("r:")
+  }
+
   const sendNewWord = () => {
     let c = newWordInputValue.toLowerCase()
     for (let i = 0; i < newWordInputValue.length; i++) {
@@ -222,7 +226,7 @@ const HangmanComponent: React.FC<HangmanComponentProps> = ({ gameIndex, reconnec
         <div>
           <div className="new-word">
             <div>
-              <label htmlFor="newWord">
+              <label htmlFor="myInput">
                 We need a new word </label>
               <input
                 type="text"
@@ -233,6 +237,7 @@ const HangmanComponent: React.FC<HangmanComponentProps> = ({ gameIndex, reconnec
               />
               <button type="button" onClick={sendNewWord}>Submit</button>
             </div>
+            <button type="button" onClick={sendRandomNewWordRequest}>Random word</button>
           </div>
         </div>
       )
@@ -300,7 +305,9 @@ const HangmanComponent: React.FC<HangmanComponentProps> = ({ gameIndex, reconnec
       return (
         <div className="change-username">
           <div>
-            <label htmlFor="myInput">Username: </label>
+            <div>
+              <label htmlFor="myInput">Username: </label>
+            </div>
             <input
               type="text"
               id="myInput"

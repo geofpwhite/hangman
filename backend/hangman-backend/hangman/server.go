@@ -150,6 +150,10 @@ func handleWebSocket(
 				i.Chat = pString[2:]
 				inp := chatInput{GameIndex: i.GameIndex, PlayerIndex: i.PlayerIndex, Message: i.Chat}
 				inputChannel <- &inp
+			case "r:":
+				inp := randomlyChooseWordInput{GameIndex: i.GameIndex, PlayerIndex: i.PlayerIndex}
+				inputChannel <- &inp
+
 			default:
 				continue
 			}
@@ -205,7 +209,6 @@ func server(inputChannel chan input, timeoutChannel chan int, outputChannel chan
 		} else {
 			conn.WriteJSON(clientState{Hash: "undefined", Warning: "1"})
 		}
-
 	})
 
 	r.GET("/valid/:playerHash", func(c *gin.Context) {

@@ -39,10 +39,8 @@ func cleanupFunction(closeGameChannel chan int) {
 	defer ticker.Stop()
 
 	for range ticker.C {
-		for i := range gStates {
-
-			if gStates[i] == nil || len(gStates[i].players) == 0 || gStates[i].consecutiveTimeouts >= len(gStates[i].players) {
-
+		for i := len(gStates) - 1; i > -1; i-- {
+			if len(gStates[i].players) == 0 || gStates[i] == nil || gStates[i].consecutiveTimeouts >= len(gStates[i].players) {
 				closeGameChannel <- i
 			}
 		}
@@ -116,7 +114,7 @@ func game(
 				continue
 			}
 			go func() {
-				timeoutChannel <- gState.handleTickerTimeout(timeoutChannel)
+				timeoutChannel <- gState.handleTickerTimeout()
 			}()
 
 		case info := <-inputChannel:
