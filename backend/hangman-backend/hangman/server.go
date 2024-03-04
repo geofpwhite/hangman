@@ -32,10 +32,6 @@ func Hash(length int) string {
 func handleWebSocket(
 	conn *websocket.Conn,
 	inputChannel chan input,
-	timeoutChannel chan int,
-	outputChannel chan clientState,
-	closeGameChannel chan int,
-	removePlayerChannel chan [2]int,
 	gState *gameState,
 	reconnect bool,
 	hash string,
@@ -155,7 +151,7 @@ func handleWebSocket(
 	}
 }
 
-func server(inputChannel chan input, timeoutChannel chan int, outputChannel chan clientState, newGameChannel chan bool, closeGameChannel chan int, removePlayerChannel chan [2]int) {
+func server(inputChannel chan input, timeoutChannel chan int, outputChannel chan clientState, newGameChannel chan bool, removePlayerChannel chan [2]int) {
 	var upgrader = websocket.Upgrader{
 		CheckOrigin: func(r *http.Request) bool {
 			return true
@@ -186,6 +182,7 @@ func server(inputChannel chan input, timeoutChannel chan int, outputChannel chan
 		conn, err := upgrader.Upgrade(c.Writer, c.Request, nil)
 		if err != nil {
 			fmt.Println(err)
+			fmt.Println(2)
 			conn.Close()
 			return
 		}
@@ -197,7 +194,7 @@ func server(inputChannel chan input, timeoutChannel chan int, outputChannel chan
 			}
 		}
 		if gameIndex >= 0 {
-			handleWebSocket(conn, inputChannel, timeoutChannel, outputChannel, closeGameChannel, removePlayerChannel, gStates[gameIndex], true, playerHash)
+			handleWebSocket(conn, inputChannel, gStates[gameIndex], true, playerHash)
 		} else {
 			c.String(http.StatusOK, "failed")
 		}
@@ -230,7 +227,7 @@ func server(inputChannel chan input, timeoutChannel chan int, outputChannel chan
 			panic("ahhhhh")
 		}
 		_player := hashes[playerHash]
-		if _player == nil {
+		if _player == nil || gameIndex >= len(gStates) {
 			return
 		}
 		playerIndex := slices.IndexFunc(gStates[gameIndex].players, func(p player) bool { return p == *_player })
@@ -253,10 +250,11 @@ func server(inputChannel chan input, timeoutChannel chan int, outputChannel chan
 		conn, err := upgrader.Upgrade(c.Writer, c.Request, nil)
 		if err != nil {
 			fmt.Println(err)
+			fmt.Println(4)
 			conn.Close()
 			return
 		}
-		handleWebSocket(conn, inputChannel, timeoutChannel, outputChannel, closeGameChannel, removePlayerChannel, gStates[gameIndex], false, "")
+		handleWebSocket(conn, inputChannel, gStates[gameIndex], false, "")
 		// Handle WebSocket connections here
 	})
 
@@ -310,6 +308,7 @@ func outputLoop(
 				}
 				if err := player.connection.WriteJSON(newState); err != nil {
 					fmt.Println(err)
+					fmt.Println(3)
 				}
 			}
 		case gameIndex := <-timeoutChannel:
@@ -341,6 +340,7 @@ func outputLoop(
 				newState.PlayerIndex = i
 				if err := player.connection.WriteJSON(newState); err != nil {
 					fmt.Println(err)
+					fmt.Println(4)
 				}
 			}
 		}

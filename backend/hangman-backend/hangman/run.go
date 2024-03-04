@@ -53,5 +53,5 @@ func Run() {
 		close(removePlayerChannel)
 	}()
 	go game(inputChannel, timeoutChannel, outputChannel, newGameChannel, closeGameChannel, removePlayerChannel)
-	server(inputChannel, timeoutChannel, outputChannel, newGameChannel, closeGameChannel, removePlayerChannel)
+	server(inputChannel, timeoutChannel, outputChannel, newGameChannel, removePlayerChannel)
 }

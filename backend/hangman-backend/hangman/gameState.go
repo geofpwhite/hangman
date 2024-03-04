@@ -136,6 +136,29 @@ func (gState *gameState) guess(letter rune) (bool, clientState) {
 	return false, clientState{}
 }
 
+func (gState *gameState) randomNewWord() {
+	x, _ := gState.wordCheck.Query("SELECT word FROM words ORDER BY RANDOM() LIMIT 1;")
+	result := ""
+	if x.Next() {
+		x.Scan(&result)
+		if result == "" {
+			return
+		}
+	} else {
+		return
+	}
+	gState.currentWord = result
+	gState.revealedWord = ""
+	gState.needNewWord = false
+	gState.guessed = ""
+	gState.guessesLeft = 6
+	gState.winner = -1
+	for range result {
+		gState.revealedWord += "_"
+	}
+	gState.turn = (gState.curHostIndex + 1) % len(gState.players)
+}
+
 func (gState *gameState) newWord(word string) {
 	gState.mut.Lock()
 	defer gState.mut.Unlock()
@@ -192,7 +215,7 @@ func (gState *gameState) removePlayer(playerIndex int) {
 	}
 }
 
-func (gState *gameState) handleTickerTimeout(timeoutChannel chan int) int {
+func (gState *gameState) handleTickerTimeout() int {
 	gState.mut.Lock()
 	defer gState.mut.Unlock()
 	if gState.needNewWord {
