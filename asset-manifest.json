@@ -1,16 +1,16 @@
 {
   "files": {
-    "main.css": "/hangman/static/css/main.8f0ff3b7.css",
-    "main.js": "/hangman/static/js/main.bec8181c.js",
-    "static/js/787.5df0458f.chunk.js": "/hangman/static/js/787.5df0458f.chunk.js",
-    "static/media/grateful.jpeg": "/hangman/static/media/grateful.b6bbde1bf81a82705895.jpeg",
-    "index.html": "/hangman/index.html",
-    "main.8f0ff3b7.css.map": "/hangman/static/css/main.8f0ff3b7.css.map",
-    "main.bec8181c.js.map": "/hangman/static/js/main.bec8181c.js.map",
-    "787.5df0458f.chunk.js.map": "/hangman/static/js/787.5df0458f.chunk.js.map"
+    "main.css": "/static/css/main.8f0ff3b7.css",
+    "main.js": "/static/js/main.4113bc94.js",
+    "static/js/787.5df0458f.chunk.js": "/static/js/787.5df0458f.chunk.js",
+    "static/media/grateful.jpeg": "/static/media/grateful.b6bbde1bf81a82705895.jpeg",
+    "index.html": "/index.html",
+    "main.8f0ff3b7.css.map": "/static/css/main.8f0ff3b7.css.map",
+    "main.4113bc94.js.map": "/static/js/main.4113bc94.js.map",
+    "787.5df0458f.chunk.js.map": "/static/js/787.5df0458f.chunk.js.map"
   },
   "entrypoints": [
     "static/css/main.8f0ff3b7.css",
-    "static/js/main.bec8181c.js"
+    "static/js/main.4113bc94.js"
   ]
 }
