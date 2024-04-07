@@ -1,0 +1,67 @@
+<head>
+    <style>
+        .circle {
+            height: 100px;
+            width: 100px;
+            background-color: #555;
+            border-radius: 64%;
+        }
+
+        .body {
+            margin-left: 49px;
+            height: 200px;
+            width: 1px;
+            background-color: #555;
+        }
+
+        .diagonal-line {
+            position: relative;
+            width: 100px;
+            height: 100px;
+        }
+
+        .diagonal-line::after {
+            content: "";
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            border-top: 1px solid red;
+            transform: rotate(45deg);
+            transform-origin: 0% 0%;
+        }
+
+        .diagonal-line2 {
+            margin-left: 50px;
+            margin-top: 0px;
+            position: relative;
+            width: 50px;
+            height: 100px;
+        }
+
+        .diagonal-line2::after {
+
+            content: "";
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            border-top: 1px solid red;
+            transform: rotate(135deg);
+            transform-origin: 0% 0%;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="circle"></div>
+    <div class="body"></div>
+    <div style="display: flex;">
+        <div class="diagonal-line2"></div>
+        <div class="diagonal-line"></div>
+    </div>
+
+</body>

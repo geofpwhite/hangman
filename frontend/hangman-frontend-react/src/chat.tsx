@@ -21,9 +21,16 @@ const ChatMessages: React.FC<ChatProps> = ({ chats, sendMessage, players, player
   };
   const chatMessages = chats.map((element: chatMessage, _index: number) => {
     if (element.sender === players[playerIndex]) {
+      let message: Array<any> = []
+      for (let i = 27; i < element.message.length; i += 27) {
+        message.push(element.message.substring(i - 27, i))
+        message.push(
+          <br />
+        )
+      }
       return (
         <div className="container">
-          <p>{element.message}</p>
+          <p>{message}</p>
           <span className="time-right">{element.sender}</span>
         </div>
       )

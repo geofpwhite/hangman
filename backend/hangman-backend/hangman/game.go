@@ -4,7 +4,6 @@ import (
 	// "fmt"
 
 	"log"
-	"slices"
 	"time"
 
 	"github.com/gorilla/websocket"
@@ -21,78 +20,80 @@ type player struct {
 }
 
 // var gState serverState = serverState{}
-var gStates []*gameState = []*gameState{}
+var gameHashes map[string]*gameState = map[string]*gameState{}
 
-func validateGameIndexAndPlayerIndex(gameIndex, playerIndex int) bool {
-	if gameIndex >= len(gStates) || gameIndex < 0 {
+func validateGameHashAndPlayerIndex(hash string, playerIndex int) bool {
+	if gameHashes[hash] == nil {
 		return false
 	}
-	gState := gStates[gameIndex]
+	gState := gameHashes[hash]
 	if playerIndex >= len(gState.players) || playerIndex < 0 {
 		return false
 	}
 	return true
 }
-
-func cleanupFunction(closeGameChannel chan int) {
+func cleanupHashFunction(closeGameHashChannel chan string) {
 	ticker := time.NewTicker(5 * time.Minute)
 	defer ticker.Stop()
 
 	for range ticker.C {
-		for i := len(gStates) - 1; i > -1; i-- {
-			if len(gStates[i].players) == 0 || gStates[i] == nil || gStates[i].consecutiveTimeouts >= len(gStates[i].players) {
-				closeGameChannel <- i
+		for i := range gameHashes {
+			if len(gameHashes[i].players) == 0 || gameHashes[i] == nil || gameHashes[i].consecutiveTimeouts >= len(gameHashes[i].players) {
+				closeGameHashChannel <- i
 			}
 		}
 	}
 
 }
 
+type playerToRemove struct {
+	gameHash    string
+	playerIndex int
+}
+
 func game(
 	inputChannel chan input,
-	timeoutChannel chan int,
+	timeoutChannel chan string,
 	outputChannel chan clientState,
 	newGameChannel chan bool,
-	closeGameChannel chan int,
-	removePlayerChannel chan [2]int,
+	closeGameChannel chan string,
+	removePlayerChannel chan playerToRemove,
+	tickerInputChannels map[string]chan inputInfo,
+	tickerTimeoutChannel chan string,
+	emptyGameHash string,
 ) {
 
-	tickerInputChannels := []chan inputInfo{}
-	tickerTimeoutChannel := make(chan (int))
 	{
 		tickerInputChannel := make(chan (inputInfo))
-		tickerInputChannels = append(tickerInputChannels, tickerInputChannel)
+		tickerInputChannels[emptyGameHash] = tickerInputChannel
 	}
-	go cleanupFunction(closeGameChannel)
-	go gStates[0].runTicker(tickerTimeoutChannel, tickerInputChannels[0], closeGameChannel)
+	go cleanupHashFunction(closeGameChannel)
+	go gameHashes[emptyGameHash].runTicker(tickerTimeoutChannel, tickerInputChannels[emptyGameHash], closeGameChannel)
 	go func() {
-		for gameIndex := range closeGameChannel {
+		for gameHash := range closeGameChannel {
 			log.Println("close game channel")
-			if gameIndex < len(gStates) && gameIndex >= 0 {
-				gStates[gameIndex].gameIndex = gameIndex
-				gStates[gameIndex].closeGame()
-				tickerInputChannels[gameIndex] <- inputInfo{GameIndex: -1}
-				tickerInputChannels = slices.Delete(tickerInputChannels, gameIndex, gameIndex+1)
-			}
+			gameHashes[gameHash].closeGame()
+			tickerInputChannels[gameHash] <- inputInfo{GameHash: ""}
+			delete(tickerInputChannels, gameHash)
 		}
 	}()
 	for {
 		select {
 		case removePlayer := <-removePlayerChannel:
 			log.Println("removePlayerChannel")
-			if validateGameIndexAndPlayerIndex(removePlayer[0], removePlayer[1]) {
-				playerIndex := removePlayer[1]
-				gState := gStates[removePlayer[0]]
+			if validateGameHashAndPlayerIndex(removePlayer.gameHash, removePlayer.playerIndex) {
+				playerIndex := removePlayer.playerIndex
+				gState := gameHashes[removePlayer.gameHash]
 				if len(gState.players) <= 1 {
 					gState.removePlayer(playerIndex)
-					closeGameChannel <- gState.gameIndex
+					closeGameChannel <- gState.gameHash
 				} else {
 					go func() {
 						gState.removePlayer(playerIndex)
 						if len(gState.players) == 0 {
-							closeGameChannel <- gState.gameIndex
+							closeGameChannel <- gState.gameHash
 						}
-						outputChannel <- clientState{GameIndex: gState.gameIndex}
+						outputChannel <- clientState{GameHash: gState.gameHash}
 					}()
 				}
 			}
@@ -101,16 +102,14 @@ func game(
 			log.Println("newGameChannel")
 			gState := newGame()
 			newTickerInputChannel := make(chan (inputInfo))
-			tickerInputChannels = append(tickerInputChannels, newTickerInputChannel)
+			tickerInputChannels[gState.gameHash] = newTickerInputChannel
 			go (*gState).runTicker(tickerTimeoutChannel, newTickerInputChannel, closeGameChannel)
 
-		case gameIndex := <-tickerTimeoutChannel:
+		case gameHash := <-tickerTimeoutChannel:
 			log.Println("tickertimeoutchannel")
-			if gameIndex >= len(gStates) {
-				continue
-			}
-			gState := gStates[gameIndex]
-			if len((*gState).players) <= 1 {
+
+			gState := gameHashes[gameHash]
+			if len((gState).players) <= 1 {
 				continue
 			}
 			go func() {
@@ -119,7 +118,7 @@ func game(
 
 		case info := <-inputChannel:
 			log.Println("input channel")
-			tickerInputChannels[info.GetGameIndex()] <- inputInfo{PlayerIndex: info.GetPlayerIndex()}
+			tickerInputChannels[info.GetGameHash()] <- inputInfo{PlayerIndex: info.GetPlayerIndex()}
 			log.Println(info)
 			go info.ChangeStateAccordingToInput(outputChannel)
 		}

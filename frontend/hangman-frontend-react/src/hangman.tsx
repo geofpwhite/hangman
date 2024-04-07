@@ -3,34 +3,25 @@ import axios from 'axios';
 import "./hangman.css";
 import { Game, GameState } from './game';
 import GAME_OVER from "./game_over.png";
-import LEFT1 from "./1left.png"
-import LEFT2 from "./2left.png"
-import LEFT3 from "./3left.png"
-import LEFT4 from "./4left.png"
-import LEFT5 from "./5left.png"
-import LEFT6 from "./6left.png"
-import LEFT7 from "./7left.png"
-import LEFT8 from "./8left.png"
-import LEFT9 from "./9left.png"
-import GRATEFUL from "./grateful.jpeg"
+import GRATEFUL from "./grateful.jpeg";
 import Chat from './chat';
-import { setHashCookie } from './App';
+import { setGameHashCookie, setHashCookie } from './App';
 
 
 const HOST_WINS = 1
 const HOST_LOSES = 2
-const guessesLeftImages = [GAME_OVER, LEFT1, LEFT2, LEFT3, LEFT4, LEFT5, LEFT6, LEFT7, LEFT8, LEFT9]
+const guessesLeftImages = [GAME_OVER]
 var game = new Game()
 
 interface HangmanComponentProps {
-  gameIndex: number
+  gameHash: string
   reconnect: boolean
   hash: string
   reset: () => void
 }
 
 
-const HangmanComponent: React.FC<HangmanComponentProps> = ({ gameIndex, reconnect, hash, reset }) => {
+const HangmanComponent: React.FC<HangmanComponentProps> = ({ gameHash, reconnect, hash, reset }) => {
   const [webSocket, setWebSocket] = useState<WebSocket | null>(null);
   const [gameState, setGameState] = useState<GameState>();
   const [openChat, setOpenChat] = useState<boolean>(false);
@@ -39,28 +30,30 @@ const HangmanComponent: React.FC<HangmanComponentProps> = ({ gameIndex, reconnec
   const [wantsToChangeUsername, setWantsToChangeUsername] = useState<boolean>(false);
   const [newHash, setHash] = useState<string>('')
   const alphabet: string = "abcdefghijklmnopqrstuvwxyz";
-  console.log(gameIndex, reconnect, hash)
+  console.log(gameHash, reconnect, hash)
 
 
-  const _url = "http://localhost:8080"
+  // const _url = "http://localhost:8080"
+  const _url = "https://hangman-backend-geoffrey.com"
   const exitGameButton = () => {
     console.log(hash)
     return (
       <div style={{ position: "absolute" }}>
         <button onClick={() => {
-          exitGame(gameIndex)
+          exitGame(gameHash)
         }}>Exit Game</button>
       </div>
     )
   }
-  const exitGame = (gameIndex: number) => {
+  const exitGame = (gameHash: string) => {
     console.log("hash  " + newHash)
     let nhash = newHash
     if (newHash === '') {
       nhash = hash
     }
     setHashCookie("")
-    axios.get(_url + '/exit_game/' + nhash + '/' + gameIndex,).then((response) => {
+    setGameHashCookie("")
+    axios.get(_url + '/exit_game/' + nhash + '/' + gameHash,).then((response) => {
       console.log("response\n" + response)
       reset()
     })
@@ -70,9 +63,9 @@ const HangmanComponent: React.FC<HangmanComponentProps> = ({ gameIndex, reconnec
     // const ws = new WebSocket('wss://hangman-backend-geoffrey.com/ws/' + gameIndex);
     var ws: WebSocket
     if (reconnect) {
-      ws = new WebSocket('ws://localhost:8080/reconnect/' + hash)
+      ws = new WebSocket('wss://hangman-backend-geoffrey.com/reconnect/' + hash)
     } else {
-      ws = new WebSocket('ws://localhost:8080/ws/' + gameIndex)
+      ws = new WebSocket('wss://hangman-backend-geoffrey.com/ws/' + gameHash)
     }
 
     ws.onopen = () => {
@@ -202,7 +195,7 @@ const HangmanComponent: React.FC<HangmanComponentProps> = ({ gameIndex, reconnec
       return
     } else {
       return (
-        <div>
+        <div className="wrapper">
           your username is {gameState.players[gameState.playerIndex]}, it is {gameState.players[gameState.turn]}'s turn
           {
             gameState.players.map((value: string, id: number) => (
@@ -413,7 +406,7 @@ const HangmanComponent: React.FC<HangmanComponentProps> = ({ gameIndex, reconnec
       {
         determineHostAndTurnDisplay()
       }
-      <div className="theWord">
+      <div className="the-word">
         <h1>
           {
             splitWord()
@@ -421,7 +414,7 @@ const HangmanComponent: React.FC<HangmanComponentProps> = ({ gameIndex, reconnec
         </h1>
       </div>
 
-      <div className="guessesLeft">
+      <div className="guesses-left">
         <h1>
           {
             determineGuessOrCongrats()
@@ -429,22 +422,22 @@ const HangmanComponent: React.FC<HangmanComponentProps> = ({ gameIndex, reconnec
         </h1>
       </div>
 
-      <div className="lettersGuessed">
+      <div className="letters-guessed">
         {
           lettersGuessed()
         }
       </div>
-      <div className="playerNames">
+      <div className="player-names">
         {
           PlayerNames()
         }
       </div>
-      <div className="usernameInputBox">
+      <div className="username-input-box">
         {
           usernameInputBox()
         }
       </div>
-      <div className="newWordInputBox">
+      <div className="new-word-input-box">
         {
           gameState?.needNewWord ? NewWordInputBox() : (<div />)
         }

@@ -8,7 +8,7 @@ react:
 	cd frontend/hangman-frontend-react/ && rm -rf ../../dist/build && npm run build && mv build/ ../../dist/ && cd ../..
 
 backend:
-	cd backend/hangman-backend/ && rm -f ../../dist/hangman && go build -o ../../dist/hangman && cd ../..
+	cd backend/hangman-backend/ && rm -f ../../dist/hangman && go.exe build -o ../../dist/hangman && cd ../..
 
 
 serve:

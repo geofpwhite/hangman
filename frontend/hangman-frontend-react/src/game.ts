@@ -11,7 +11,7 @@ export interface GameState {
   lettersGuessed: string
   guessesLeft: number
   winner: number
-  gameIndex: number
+  gameHash: string
   chatLogs: Array<chatMessage>
   hash: string
 }
@@ -27,7 +27,7 @@ export class Game {
     lettersGuessed: "",
     guessesLeft: -1,
     winner: -1,
-    gameIndex: -1,
+    gameHash: '',
     chatLogs: [],
     hash: "",
 
@@ -68,8 +68,8 @@ export class Game {
     if (gs.playerIndex !== -1) {
       this.state.playerIndex = gs.playerIndex
     }
-    if (gs.gameIndex !== -1) {
-      this.state.gameIndex = gs.gameIndex
+    if (gs.gameHash !== '') {
+      this.state.gameHash = gs.gameHash
     }
     if (gs.chatLogs !== null) {
       this.state.chatLogs = gs.chatLogs

@@ -83,7 +83,7 @@ func handleWebSocket(
 			Warning:        "",
 			PlayerIndex:    playerIndex,
 			Winner:         gState.winner,
-			GameIndex:      gState.gameIndex,
+			GameHash:       gState.gameHash,
 			ChatLogs:       gState.chatLogs,
 			Hash:           playerHash,
 		})
@@ -109,7 +109,7 @@ func handleWebSocket(
 		Warning:        "",
 		PlayerIndex:    playerIndex,
 		Winner:         gState.winner,
-		GameIndex:      gState.gameIndex,
+		GameHash:       gState.gameHash,
 		ChatLogs:       gState.chatLogs,
 	}
 
@@ -125,7 +125,7 @@ func handleWebSocket(
 		}
 
 		i := inputInfo{
-			GameIndex: gState.gameIndex,
+			GameHash: gState.gameHash,
 			PlayerIndex: slices.IndexFunc(gState.players, func(p player) bool {
 				return p.hash == hash
 			}),
@@ -136,22 +136,22 @@ func handleWebSocket(
 			switch pString[:2] {
 			case "g:":
 				i.Guess = pString[2:]
-				inp := guessInput{GameIndex: i.GameIndex, PlayerIndex: i.PlayerIndex, Guess: i.Guess}
+				inp := guessInput{GameHash: i.GameHash, PlayerIndex: i.PlayerIndex, Guess: i.Guess}
 				inputChannel <- &inp
 			case "u:":
 				i.Username = pString[2:]
-				inp := usernameInput{GameIndex: i.GameIndex, PlayerIndex: i.PlayerIndex, Username: i.Username}
+				inp := usernameInput{GameHash: i.GameHash, PlayerIndex: i.PlayerIndex, Username: i.Username}
 				inputChannel <- &inp
 			case "w:":
 				i.Word = pString[2:]
-				inp := newWordInput{GameIndex: i.GameIndex, PlayerIndex: i.PlayerIndex, NewWord: i.Word}
+				inp := newWordInput{GameHash: i.GameHash, PlayerIndex: i.PlayerIndex, NewWord: i.Word}
 				inputChannel <- &inp
 			case "c:":
 				i.Chat = pString[2:]
-				inp := chatInput{GameIndex: i.GameIndex, PlayerIndex: i.PlayerIndex, Message: i.Chat}
+				inp := chatInput{GameHash: i.GameHash, PlayerIndex: i.PlayerIndex, Message: i.Chat}
 				inputChannel <- &inp
 			case "r:":
-				inp := randomlyChooseWordInput{GameIndex: i.GameIndex, PlayerIndex: i.PlayerIndex}
+				inp := randomlyChooseWordInput{GameHash: i.GameHash, PlayerIndex: i.PlayerIndex}
 				inputChannel <- &inp
 
 			default:
@@ -161,7 +161,7 @@ func handleWebSocket(
 	}
 }
 
-func server(inputChannel chan input, timeoutChannel chan int, outputChannel chan clientState, newGameChannel chan bool, removePlayerChannel chan [2]int) {
+func server(inputChannel chan input, timeoutChannel chan string, outputChannel chan clientState, newGameChannel chan bool, removePlayerChannel chan playerToRemove, tickerTimeoutChannel chan string, closeGameChannel chan string, tickerInputChannels map[string]chan inputInfo) {
 	var upgrader = websocket.Upgrader{
 		CheckOrigin: func(r *http.Request) bool {
 			return true
@@ -177,15 +177,24 @@ func server(inputChannel chan input, timeoutChannel chan int, outputChannel chan
 		}
 	})
 	r.GET("/new_game", func(c *gin.Context) {
-		newGameChannel <- true
-		c.JSON(200, struct{ length int }{length: len(gStates)})
+		log.Println("newGameChannel")
+		gState := newGame()
+		newTickerInputChannel := make(chan (inputInfo))
+		tickerInputChannels[gState.gameHash] = newTickerInputChannel
+		go (*gState).runTicker(tickerTimeoutChannel, newTickerInputChannel, closeGameChannel)
+		c.JSON(200, struct{ gameHash string }{gameHash: gState.gameHash})
 	})
 	r.GET("/get_games", func(c *gin.Context) {
-		c.String(http.StatusOK, strconv.Itoa(len(gStates)))
+		c.String(http.StatusOK, "0")
 	})
 
-	r.GET("/reconnect/:playerHash", func(c *gin.Context) {
+	r.GET("/reconnect/:playerHash/:gameHash", func(c *gin.Context) {
+
 		playerHash, b := c.Params.Get("playerHash")
+		if !b {
+			return
+		}
+		gameHash, b := c.Params.Get("gameHash")
 		if !b {
 			return
 		}
@@ -196,16 +205,20 @@ func server(inputChannel chan input, timeoutChannel chan int, outputChannel chan
 			conn.Close()
 			return
 		}
-		gameIndex := -1
-		for i := range gStates {
 
-			if index := slices.IndexFunc(gStates[i].players, func(p player) bool { fmt.Println(p, hashes[playerHash], playerHash); return p.hash == playerHash }); index != -1 {
-				gameIndex = i
-				break
-			}
+		if index := slices.IndexFunc(
+			gameHashes[gameHash].players,
+			func(p player) bool {
+				fmt.Println(p, hashes[playerHash], playerHash)
+				return p.hash == playerHash
+			}); index != -1 {
+
+			conn.WriteJSON(clientState{Hash: "undefined", Warning: "1"})
+			return
 		}
-		if gameIndex >= 0 {
-			handleWebSocket(conn, inputChannel, gStates[gameIndex], true, playerHash)
+
+		if gameHashes[gameHash] != nil {
+			handleWebSocket(conn, inputChannel, gameHashes[gameHash], true, playerHash)
 		} else {
 			conn.WriteJSON(clientState{Hash: "undefined", Warning: "1"})
 		}
@@ -216,45 +229,37 @@ func server(inputChannel chan input, timeoutChannel chan int, outputChannel chan
 		if hashes[hash] == nil {
 			c.String(http.StatusOK, "-1")
 		} else {
-			var gameIndex int
-			for i, g := range gStates {
+			var gameHash string
+			for i, g := range gameHashes {
 				for _, p := range g.players {
 					if p == *hashes[hash] {
-						gameIndex = i
+						gameHash = i
 					}
 				}
 			}
-			c.String(http.StatusOK, strconv.Itoa(gameIndex))
+			c.String(http.StatusOK, gameHash)
 		}
 	})
 
-	r.GET("/exit_game/:playerHash/:gameIndex", func(c *gin.Context) {
+	r.GET("/exit_game/:playerHash/:gameHash", func(c *gin.Context) {
 		defer c.String(http.StatusOK, "ok")
 		playerHash, _ := c.Params.Get("playerHash")
-		str, _ := c.Params.Get("gameIndex")
-		gameIndex, err := strconv.Atoi(str)
-		if err != nil {
-			panic("ahhhhh")
-		}
+		gameHash, _ := c.Params.Get("gameHash")
 		_player := hashes[playerHash]
-		if _player == nil || gameIndex >= len(gStates) {
+		if _player == nil || gameHashes[gameHash] == nil {
 			return
 		}
-		playerIndex := slices.IndexFunc(gStates[gameIndex].players, func(p player) bool { return p.hash == _player.hash })
+		playerIndex := slices.IndexFunc(gameHashes[gameHash].players, func(p player) bool { return p.hash == _player.hash })
 		delete(hashes, playerHash)
-		removePlayerChannel <- [2]int{gameIndex, playerIndex}
+		removePlayerChannel <- playerToRemove{gameHash, playerIndex}
 	})
-	r.GET("/ws/:gameIndex", func(c *gin.Context) {
-		str, b := c.Params.Get("gameIndex")
+	r.GET("/ws/:gameHash", func(c *gin.Context) {
+		gameHash, b := c.Params.Get("gameHash")
 		if !b {
 			return
 		}
-		gameIndex, err := strconv.Atoi(str)
-		if err != nil {
-			return
-		}
-		if gameIndex >= len(gStates) {
-			c.String(http.StatusOK, strconv.Itoa(len(gStates)))
+		if gameHashes[gameHash] == nil {
+			c.String(http.StatusOK, "no such game")
 			return
 		}
 		conn, err := upgrader.Upgrade(c.Writer, c.Request, nil)
@@ -264,19 +269,18 @@ func server(inputChannel chan input, timeoutChannel chan int, outputChannel chan
 			conn.Close()
 			return
 		}
-		handleWebSocket(conn, inputChannel, gStates[gameIndex], false, "")
+		handleWebSocket(conn, inputChannel, gameHashes[gameHash], false, "")
 		// Handle WebSocket connections here
 	})
 
 	go outputLoop(timeoutChannel, outputChannel)
 	gin.SetMode(gin.ReleaseMode)
 	r.Run("localhost:8080") // listen and serve on 0.0.0.0:8080 (for windows "localhost:8080")
-
 	// r.RunTLS("localhost:8080") // listen and serve on 0.0.0.0:8080 (for windows "localhost:8080")
 }
 
 func outputLoop(
-	timeoutChannel chan int,
+	timeoutChannel chan string,
 	outputChannel chan clientState,
 ) {
 	for {
@@ -284,17 +288,17 @@ func outputLoop(
 		select {
 		case s := <-outputChannel:
 			log.Println("outputChannel")
-			if s.GameIndex >= len(gStates) {
+			gState := gameHashes[s.GameHash]
+			if gState == nil {
 				continue
 			}
-			gState := gStates[s.GameIndex]
 
 			usernames := []string{}
 			for _, p := range gState.players {
 				usernames = append(usernames, p.username)
 			}
 			newState := clientState{
-				GameIndex:      gState.gameIndex,
+				GameHash:       gState.gameHash,
 				Players:        usernames,
 				Turn:           gState.turn,
 				Host:           gState.curHostIndex,
@@ -321,12 +325,12 @@ func outputLoop(
 					fmt.Println(3)
 				}
 			}
-		case gameIndex := <-timeoutChannel:
+		case gameHash := <-timeoutChannel:
 			log.Println("timeoutChannel")
-			if gameIndex >= len(gStates) || gameIndex < 0 {
+			if gameHashes[gameHash] == nil {
 				continue
 			}
-			gState := gStates[gameIndex]
+			gState := gameHashes[gameHash]
 			usernames := []string{}
 			for _, p := range (*gState).players {
 				usernames = append(usernames, p.username)
@@ -339,7 +343,7 @@ func outputLoop(
 				GuessesLeft:    gState.guessesLeft,
 				LettersGuessed: gState.guessed,
 				NeedNewWord:    gState.needNewWord,
-				GameIndex:      gState.gameIndex,
+				GameHash:       gState.gameHash,
 				Warning:        "timed out",
 				Winner:         gState.winner,
 				ChatLogs:       gState.chatLogs,

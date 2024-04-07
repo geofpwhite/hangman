@@ -29,11 +29,11 @@ type gameState struct {
 	guessesLeft         int
 	needNewWord         bool
 	winner              int
-	gameIndex           int
 	mut                 *sync.Mutex
 	chatLogs            []chatLog
 	consecutiveTimeouts int
 	randomlyChosen      bool //boolean for methods to check if they need to act differently because the backend randomly chose a word
+	gameHash            string
 }
 
 func newGame() *gameState {
@@ -46,18 +46,18 @@ func newGame() *gameState {
 		needNewWord:  true,
 		guessesLeft:  6,
 		players:      make([]player, 0),
-		gameIndex:    len(gStates),
 		mut:          &sync.Mutex{},
 	}
-
-	gStates = append(gStates, gState)
+	gameCode := Hash(6)
+	gameHashes[gameCode] = gState
+	gState.gameHash = gameCode
 	return gState
 }
 
 /*
 starts a ticker that either times out the current turn and increments it, or resets back to 0 on user input
 */
-func (gState *gameState) runTicker(timeoutChannel chan int, inputChannel chan inputInfo, closeGameChannel chan int) {
+func (gState *gameState) runTicker(timeoutChannel chan string, inputChannel chan inputInfo, closeGameChannel chan string) {
 	ticker := time.NewTicker(60 * time.Second)
 	gState.consecutiveTimeouts = 0
 	defer ticker.Stop()
@@ -68,10 +68,10 @@ func (gState *gameState) runTicker(timeoutChannel chan int, inputChannel chan in
 		case <-ticker.C:
 			log.Println("ticker")
 
-			timeoutChannel <- (*gState).gameIndex
+			timeoutChannel <- (*gState).gameHash
 			gState.consecutiveTimeouts++
 			if gState.consecutiveTimeouts >= len(gState.players) {
-				closeGameChannel <- gState.gameIndex
+				closeGameChannel <- gState.gameHash
 			}
 
 		case x := <-inputChannel:
@@ -113,7 +113,7 @@ func (gState *gameState) guess(letter rune) (bool, clientState) {
 				good = true
 			}
 		}
-		changedPartsOfState := clientState{GameIndex: gState.gameIndex}
+		changedPartsOfState := clientState{GameHash: gState.gameHash}
 
 		if gState.currentWord == gState.revealedWord {
 			changedPartsOfState.NeedNewWord = true
@@ -198,12 +198,8 @@ func (gState *gameState) closeGame() {
 	for _, p := range gState.players {
 		delete(hashes, p.hash)
 	}
-	for i := range gStates[gState.gameIndex+1:] {
-		gStates[i+gState.gameIndex+1].mut.Lock()
-		gStates[i+gState.gameIndex+1].gameIndex--
-		gStates[i+gState.gameIndex+1].mut.Unlock()
-	}
-	gStates = slices.Delete(gStates, gState.gameIndex, gState.gameIndex+1)
+	// gStates = slices.Delete(gStates, gState.gameIndex, gState.gameIndex+1)
+	delete(gameHashes, gState.gameHash)
 }
 
 func (gState *gameState) removePlayer(playerIndex int) {
@@ -225,7 +221,7 @@ func (gState *gameState) removePlayer(playerIndex int) {
 	}
 }
 
-func (gState *gameState) handleTickerTimeout() int {
+func (gState *gameState) handleTickerTimeout() string {
 	gState.mut.Lock()
 	defer gState.mut.Unlock()
 	if gState.needNewWord {
@@ -237,7 +233,7 @@ func (gState *gameState) handleTickerTimeout() int {
 			(*gState).turn = ((*gState).turn + 1) % len((*gState).players)
 		}
 	}
-	return gState.gameIndex
+	return gState.gameHash
 }
 
 func (gState *gameState) changeUsername(playerIndex int, newUsername string) {

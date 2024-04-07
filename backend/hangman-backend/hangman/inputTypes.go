@@ -5,79 +5,79 @@ Interface implemented by user input objects to be accepted by game loop
 */
 type input interface {
 	ChangeStateAccordingToInput(chan clientState)
-	GetGameIndex() int
+	GetGameHash() string
 	GetPlayerIndex() int
 }
 type usernameInput struct {
 	Username    string
-	GameIndex   int
+	GameHash    string
 	PlayerIndex int
 }
 type newWordInput struct {
 	NewWord     string
-	GameIndex   int
+	GameHash    string
 	PlayerIndex int
 }
 type randomlyChooseWordInput struct {
 	Guess       string
-	GameIndex   int
+	GameHash    string
 	PlayerIndex int
 }
 type guessInput struct {
 	Guess       string
-	GameIndex   int
+	GameHash    string
 	PlayerIndex int
 }
 type chatInput struct {
 	Message     string
-	GameIndex   int
+	GameHash    string
 	PlayerIndex int
 }
 type ruleChangeInput struct {
 }
 
-func (ui *usernameInput) GetGameIndex() int {
-	return ui.GameIndex
+func (ui *usernameInput) GetGameHash() string {
+	return ui.GameHash
 }
 func (ui *usernameInput) GetPlayerIndex() int {
 	return ui.PlayerIndex
 }
 func (ui *usernameInput) ChangeStateAccordingToInput(outputChannel chan clientState) {
-	if validateGameIndexAndPlayerIndex(ui.GameIndex, ui.PlayerIndex) {
-		gState := gStates[ui.GameIndex]
+	if validateGameHashAndPlayerIndex(ui.GameHash, ui.PlayerIndex) {
+		gState := gameHashes[ui.GameHash]
 		gState.changeUsername(ui.PlayerIndex, ui.Username)
-		outputChannel <- clientState{GameIndex: gState.gameIndex}
+		outputChannel <- clientState{GameHash: gState.gameHash}
 	}
 }
 
-func (nwi *newWordInput) GetGameIndex() int {
-	return nwi.GameIndex
+func (nwi *newWordInput) GetGameHash() string {
+	return nwi.GameHash
 }
 func (nwi *newWordInput) GetPlayerIndex() int {
 	return nwi.PlayerIndex
 }
 func (nwi *newWordInput) ChangeStateAccordingToInput(outputChannel chan clientState) {
-	if validateGameIndexAndPlayerIndex(nwi.GameIndex, nwi.PlayerIndex) {
-		gState := gStates[nwi.GameIndex]
+	if validateGameHashAndPlayerIndex(nwi.GameHash, nwi.PlayerIndex) {
+		gState := gameHashes[nwi.GameHash]
 
 		if gState.needNewWord && nwi.PlayerIndex == gState.curHostIndex {
 			gState.newWord(nwi.NewWord)
-			outputChannel <- clientState{GameIndex: gState.gameIndex}
+			outputChannel <- clientState{GameHash: gState.gameHash}
 		} else {
 			outputChannel <- clientState{Warning: "you can't pick the word right now", PlayerIndex: nwi.PlayerIndex}
 		}
 	}
 }
-func (gi *guessInput) GetGameIndex() int {
-	return gi.GameIndex
+func (gi *guessInput) GetGameHash() string {
+	return gi.GameHash
 }
 func (gi *guessInput) GetPlayerIndex() int {
 	return gi.PlayerIndex
 }
 
 func (gi *guessInput) ChangeStateAccordingToInput(outputChannel chan clientState) {
-	if validateGameIndexAndPlayerIndex(gi.GameIndex, gi.PlayerIndex) {
-		gState := gStates[gi.GameIndex]
+	if validateGameHashAndPlayerIndex(gi.GameHash, gi.PlayerIndex) {
+		gState := gameHashes[gi.GameHash]
 		if gi.PlayerIndex == gState.turn {
 			// fmt.Println("guess")
 			output, changedParts := gState.guess(rune(gi.Guess[0]))
@@ -90,30 +90,30 @@ func (gi *guessInput) ChangeStateAccordingToInput(outputChannel chan clientState
 	}
 }
 
-func (ci *chatInput) GetGameIndex() int {
-	return ci.GameIndex
+func (ci *chatInput) GetGameHash() string {
+	return ci.GameHash
 }
 func (ci *chatInput) GetPlayerIndex() int {
 	return ci.PlayerIndex
 }
 func (ci *chatInput) ChangeStateAccordingToInput(outputChannel chan clientState) {
-	if validateGameIndexAndPlayerIndex(ci.GameIndex, ci.PlayerIndex) {
-		gState := gStates[ci.GameIndex]
+	if validateGameHashAndPlayerIndex(ci.GameHash, ci.PlayerIndex) {
+		gState := gameHashes[ci.GameHash]
 		gState.chat(ci.Message, ci.PlayerIndex)
-		outputChannel <- clientState{GameIndex: ci.GameIndex}
+		outputChannel <- clientState{GameHash: ci.GameHash}
 	}
 }
 
-func (rcwi *randomlyChooseWordInput) GetGameIndex() int {
-	return rcwi.GameIndex
+func (rcwi *randomlyChooseWordInput) GetGameHash() string {
+	return rcwi.GameHash
 }
 func (rcwi *randomlyChooseWordInput) GetPlayerIndex() int {
 	return rcwi.PlayerIndex
 }
 func (rcwi *randomlyChooseWordInput) ChangeStateAccordingToInput(outputChannel chan clientState) {
-	if validateGameIndexAndPlayerIndex(rcwi.GameIndex, rcwi.PlayerIndex) {
-		gState := gStates[rcwi.GameIndex]
+	if validateGameHashAndPlayerIndex(rcwi.GameHash, rcwi.PlayerIndex) {
+		gState := gameHashes[rcwi.GameHash]
 		gState.randomNewWord()
-		outputChannel <- clientState{GameIndex: rcwi.GameIndex}
+		outputChannel <- clientState{GameHash: rcwi.GameHash}
 	}
 }
