@@ -52,26 +52,27 @@ function App() {
         console.log("response\n" + response)
         setGames(response.data)
       })
-      axios.get(_url + '/valid/' + hash,).then((response) => {
-        console.log("response\n" + response.data)
-        if (response.data === -1) {
+      if (hash !== '') {
+        axios.get(_url + '/valid/' + hash,).then((response) => {
+          console.log("response\n" + response.data)
+          if (response.data === -1) {
 
-          setReconnect(false)
-          setGameChoice(-1)
-        } else {
-          setReconnect(true)
-          setGameChoice(response.data)
-        }
-      })
+            setReconnect(false)
+            setGameChoice(-1)
+          } else {
+            setReconnect(true)
+            setGameChoice(response.data)
+          }
+        })
+      }
     }, []
   )
   const sendNewGame = () => {
     fetch(_url + "/new_game").then((response: any) => {
       response.json().then((obj: { length: number }) => {
         setGames(obj.length)
+        setGameChoice(games)
       })
-    }).then(() => {
-      setGameChoice(games)
     })
   }
   const selectGame = (index: number, reconnect: boolean) => {
@@ -85,7 +86,7 @@ function App() {
   const needToSelectGame = () => {
     let ary = []
     for (let i = 0; i < games; i++) {
-      ary.push((<div><button onClick={() => { setGameChoice(i) }}>Join Game</button></div>))
+      ary.push((<div key={i}><button id={"join-game-" + i} key={i} onClick={() => { setGameChoice(i) }}>Join Game</button></div>))
     }
     return ary
   }
@@ -100,10 +101,6 @@ function App() {
     );
   }
 
-
-
-
-
   return (
     <div className="App">
       {
@@ -114,7 +111,7 @@ function App() {
                 {needToSelectGame()}
               </div>
               <div>
-                <button onClick={() => {
+                <button id="new-game" key="new-game" onClick={() => {
                   sendNewGame()
                 }}>New Game</button>
               </div>

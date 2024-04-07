@@ -2,24 +2,14 @@ import React, { useEffect, useState } from 'react';
 import axios from 'axios';
 import "./hangman.css";
 import { Game, GameState } from './game';
-import GAME_OVER from "./game_over.png";
-import LEFT1 from "./1left.png"
-import LEFT2 from "./2left.png"
-import LEFT3 from "./3left.png"
-import LEFT4 from "./4left.png"
-import LEFT5 from "./5left.png"
-import LEFT6 from "./6left.png"
-import LEFT7 from "./7left.png"
-import LEFT8 from "./8left.png"
-import LEFT9 from "./9left.png"
 import GRATEFUL from "./grateful.jpeg"
 import Chat from './chat';
 import { setHashCookie } from './App';
 
 
+
 const HOST_WINS = 1
 const HOST_LOSES = 2
-const guessesLeftImages = [GAME_OVER, LEFT1, LEFT2, LEFT3, LEFT4, LEFT5, LEFT6, LEFT7, LEFT8, LEFT9]
 var game = new Game()
 
 interface HangmanComponentProps {
@@ -41,13 +31,33 @@ const HangmanComponent: React.FC<HangmanComponentProps> = ({ gameIndex, reconnec
   const alphabet: string = "abcdefghijklmnopqrstuvwxyz";
   console.log(gameIndex, reconnect, hash)
 
+  const stickFigure = (
+    gameState ?
+      gameState.winner === HOST_LOSES ?
+        <img src={GRATEFUL} alt="" className="grateful-man" /> :
+        <div className="stick-figure">
+          <div className="gallows-top" style={{ backgroundColor: gameState!.guessesLeft < 8 ? "#333" : "white" }} />
+          <div className="gallows-vertical" style={{ backgroundColor: gameState!.guessesLeft < 9 ? "#333" : "white" }} />
+          <div className="rope" style={{ backgroundColor: gameState!.guessesLeft < 7 ? "#333" : "white" }} />
+          <div className="head" style={{ border: gameState!.guessesLeft < 6 ? "1px solid #333" : "1px solid white" }} />
+          <div className="body" style={{ backgroundColor: gameState!.guessesLeft < 5 ? "#333" : "white" }} />
+          <div className="right-leg" style={{ backgroundColor: gameState!.guessesLeft < 4 ? "#333" : "white" }} />
+          <div className="left-leg" style={{ backgroundColor: gameState!.guessesLeft < 3 ? "#333" : "white" }} />
+          <div className="right-arm" style={{ backgroundColor: gameState!.guessesLeft < 2 ? "#333" : "white" }} />
+          <div className="left-arm" style={{ backgroundColor: gameState.winner !== -1 ? "#333" : "white" }} />
+          <div className="gallows-floor" style={{ backgroundColor: gameState!.guessesLeft < 10 ? "#333" : "white" }} />
+        </div> : null
+  )
 
+
+
+  // const _url = "https://hangman-backend-geoffrey.com"
   const _url = "http://localhost:8080"
   const exitGameButton = () => {
     console.log(hash)
     return (
-      <div style={{ position: "absolute" }}>
-        <button onClick={() => {
+      <div style={{ position: "absolute", borderBottom: "1px solid #000" }}>
+        <button id="exit-game" className="exit-game" onClick={() => {
           exitGame(gameIndex)
         }}>Exit Game</button>
       </div>
@@ -70,8 +80,10 @@ const HangmanComponent: React.FC<HangmanComponentProps> = ({ gameIndex, reconnec
     // const ws = new WebSocket('wss://hangman-backend-geoffrey.com/ws/' + gameIndex);
     var ws: WebSocket
     if (reconnect) {
+      // ws = new WebSocket('wss://hangman-backend-geoffrey.com/reconnect/' + hash)
       ws = new WebSocket('ws://localhost:8080/reconnect/' + hash)
     } else {
+      // ws = new WebSocket('wss://hangman-backend-geoffrey.com/ws/' + gameIndex)
       ws = new WebSocket('ws://localhost:8080/ws/' + gameIndex)
     }
 
@@ -104,7 +116,6 @@ const HangmanComponent: React.FC<HangmanComponentProps> = ({ gameIndex, reconnec
 
     return () => {
       ws.close();
-
     };
   }, []); // Empty dependency array ensures this effect runs only once
 
@@ -120,27 +131,8 @@ const HangmanComponent: React.FC<HangmanComponentProps> = ({ gameIndex, reconnec
     }
   }
 
-
   const drawHangMan = () => {
-    if (!gameState) {
-      return
-    }
-    if (gameState.guessesLeft >= 10) {
-      return <div style={{ width: "300px", height: "100px" }} />
-    } else if (gameState?.guessesLeft < 10) {
-      if (gameState.needNewWord) {
-        if (gameState.winner === HOST_WINS) {
-
-          return <img src={GAME_OVER} style={{ width: "300px", height: "100px" }} alt="" />
-        } else if (gameState.winner === HOST_LOSES) {
-          return <img src={GRATEFUL} style={{ width: "300px", height: "100px" }} alt="" />
-        }
-      }
-      return (
-        <img src={guessesLeftImages[gameState?.guessesLeft]} style={{ width: "300px", height: "100px" }} alt="" />
-      )
-    }
-
+    return stickFigure
   }
 
 
@@ -206,7 +198,7 @@ const HangmanComponent: React.FC<HangmanComponentProps> = ({ gameIndex, reconnec
           your username is {gameState.players[gameState.playerIndex]}, it is {gameState.players[gameState.turn]}'s turn
           {
             gameState.players.map((value: string, id: number) => (
-              <div style={{ color: id === gameState.turn ? 'green' : id === gameState.host ? 'red' : 'black' }}>
+              <div key={id} style={{ color: id === gameState.turn ? 'green' : id === gameState.host ? 'red' : 'black' }}>
                 {gameState.host === id ? value + "<- HOST" : value}
               </div>
             ))}
@@ -235,9 +227,9 @@ const HangmanComponent: React.FC<HangmanComponentProps> = ({ gameIndex, reconnec
                 onChange={handleChange2}
                 placeholder="Type here..."
               />
-              <button type="button" onClick={sendNewWord}>Submit</button>
+              <button id="send-new-word" type="button" onClick={sendNewWord}>Submit</button>
             </div>
-            <button type="button" onClick={sendRandomNewWordRequest}>Random word</button>
+            <button id="random-new-word" type="button" onClick={sendRandomNewWordRequest}>Random word</button>
           </div>
         </div>
       )
@@ -315,14 +307,14 @@ const HangmanComponent: React.FC<HangmanComponentProps> = ({ gameIndex, reconnec
               onChange={handleChange}
               placeholder="Type here..."
             />
-            <button onClick={changeUsername}>Submit</button>
+            <button id="change-username" onClick={changeUsername}>Submit</button>
           </div>
         </div>
       )
     } else {
       return (
         <div>
-          <button type="button" onClick={() => { setWantsToChangeUsername(true) }}>Change Username</button>
+          <button id="wants-to-change-username" type="button" onClick={() => { setWantsToChangeUsername(true) }}>Change Username</button>
         </div>
       )
     }
@@ -374,7 +366,7 @@ const HangmanComponent: React.FC<HangmanComponentProps> = ({ gameIndex, reconnec
         {alphabet.split("").map((value: string, id: number) => {
           if (!(gameState?.lettersGuessed.includes(value))) {
             return (
-              <button type="button" key={id} className="letter-button" onClick={() => sendGuess(value)} >
+              <button id={"letter-" + value} type="button" key={id} className="letter-button" onClick={() => sendGuess(value)} >
                 {value}
               </button>
             )
@@ -452,7 +444,7 @@ const HangmanComponent: React.FC<HangmanComponentProps> = ({ gameIndex, reconnec
       {
         letterGrid()
       }
-      <button type="button"
+      <button id="open-chat" type="button"
         onClick={() => { setOpenChat(!openChat) }}
       >Toggle Chat
       </button>

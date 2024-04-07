@@ -199,7 +199,7 @@ func server(inputChannel chan input, timeoutChannel chan int, outputChannel chan
 		gameIndex := -1
 		for i := range gStates {
 
-			if index := slices.IndexFunc(gStates[i].players, func(p player) bool { fmt.Println(p, hashes[playerHash], playerHash); return p.hash == playerHash }); index != -1 {
+			if index := slices.IndexFunc(gStates[i].players, func(p player) bool { return p.hash == playerHash }); index != -1 {
 				gameIndex = i
 				break
 			}
@@ -240,7 +240,7 @@ func server(inputChannel chan input, timeoutChannel chan int, outputChannel chan
 		if _player == nil || gameIndex >= len(gStates) {
 			return
 		}
-		playerIndex := slices.IndexFunc(gStates[gameIndex].players, func(p player) bool { return p.hash == _player.hash })
+		playerIndex := slices.IndexFunc(gStates[gameIndex].players, func(p player) bool { return p.hash == playerHash })
 		delete(hashes, playerHash)
 		removePlayerChannel <- [2]int{gameIndex, playerIndex}
 	})

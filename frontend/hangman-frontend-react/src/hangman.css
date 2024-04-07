@@ -94,6 +94,10 @@ button {
 
 }
 
+.exit-game {
+    border-bottom: 1px solid #000
+}
+
 
 /* Styling for the letter button */
 .letter-button {
@@ -116,4 +120,109 @@ button {
 #letters-guessed {
     margin-right: 5px;
     font-size: 20px;
+}
+
+.gallows-top {
+    width: 48px;
+    border: 1px solid black;
+}
+
+.gallows-floor {
+    width: 148px;
+    border: 1px solid black;
+}
+
+.gallows-vertical {
+    height: 230px;
+    width: 0px;
+    border: 1px solid black;
+}
+
+
+.grateful-man {
+    position: relative;
+    top: 20px;
+    width: 300px;
+    height: 100px;
+    margin-bottom: 10px;
+}
+
+.stick-figure {
+    position: relative;
+    width: 100px;
+    height: 230px;
+    background-color: #fff;
+    display: block;
+    margin-left: auto;
+    margin-right: auto;
+    top: 20px;
+}
+
+.rope {
+    position: absolute;
+    top: 0;
+    left: 50%;
+    height: 30px;
+    border: 2px solid #333;
+}
+
+.head {
+    position: absolute;
+    top: 30px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 50px;
+    height: 50px;
+    background-color: #fff;
+    border: 2px solid #333;
+    border-width: 1px;
+    border-radius: 50%;
+}
+
+.body {
+    position: absolute;
+    top: 80px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 1px;
+    height: 100px;
+    background-color: #333;
+}
+
+.right-leg,
+.left-leg {
+    position: absolute;
+    top: 180px;
+    width: 1px;
+    height: 50px;
+    background-color: #333;
+}
+
+.right-leg {
+    left: 40%;
+    transform: rotate(20deg);
+}
+
+.left-leg {
+    left: 60%;
+    transform: rotate(-20deg);
+}
+
+.right-arm,
+.left-arm {
+    position: absolute;
+    top: 80px;
+    width: 1px;
+    height: 50px;
+    background-color: #333;
+}
+
+.right-arm {
+    left: 30%;
+    transform: rotate(45deg);
+}
+
+.left-arm {
+    left: 70%;
+    transform: rotate(-45deg);
 }

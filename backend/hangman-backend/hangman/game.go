@@ -119,6 +119,9 @@ func game(
 
 		case info := <-inputChannel:
 			log.Println("input channel")
+			if info.GetGameIndex() >= len(tickerInputChannels) {
+				continue
+			}
 			tickerInputChannels[info.GetGameIndex()] <- inputInfo{PlayerIndex: info.GetPlayerIndex()}
 			log.Println(info)
 			go info.ChangeStateAccordingToInput(outputChannel)
