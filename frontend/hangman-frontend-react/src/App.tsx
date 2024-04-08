@@ -52,18 +52,19 @@ function App() {
       axios.get(_url + '/get_games',).then((response) => {
         console.log("response\n" + response)
       })
-      axios.get(_url + '/valid/' + hash,).then((response) => {
-        console.log("response\n" + response.data)
-        if (response.data === -1) {
+      if (hash !== '') {
+        axios.get(_url + '/valid/' + hash,).then((response) => {
+          console.log("response\n" + response.data)
+          if (response.data === -1) {
 
-          setReconnect(false)
-          setGameChoice('')
-        } else {
-          setReconnect(true)
-          setGameChoice(response.data)
-        }
-      })
-    }, []
+            setReconnect(false)
+            setGameChoice('')
+          } else {
+            setReconnect(true)
+            setGameChoice(response.data)
+          }
+        })
+      }, []
   )
   const sendNewGame = () => {
     fetch(_url + "/new_game").then((response: any) => {
@@ -117,10 +118,6 @@ function App() {
     );
   }
 
-
-
-
-
   return (
     <div className="App">
       {
@@ -131,7 +128,7 @@ function App() {
                 {needToSelectGame()}
               </div>
               <div>
-                <button onClick={() => {
+                <button id="new-game" key="new-game" onClick={() => {
                   sendNewGame()
                 }}>New Game</button>
               </div>

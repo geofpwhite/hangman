@@ -4,16 +4,18 @@ test functions
 package hangman
 
 import (
+	"fmt"
 	"testing"
 )
 
 func TestAll(t *testing.T) {
-	t.Run("11", TestOnePersonOneGame)
-	t.Run("21", TestTwoPeopleOneGame)
-	t.Run("52", TestFivePeopleTwoGames)
-	t.Run("add-and-remove", TestAddingAndRemovingPlayers)
-	t.Run("word-change-host-loses", TestSuccessfulGuessAndHostChange)
-	t.Run("word-change-host-wins", TestHostWinsAndHostChange)
+	t.Run("random", TestRandomWord)
+	// t.Run("11", TestOnePersonOneGame)
+	// t.Run("21", TestTwoPeopleOneGame)
+	// t.Run("52", TestFivePeopleTwoGames)
+	// t.Run("add-and-remove", TestAddingAndRemovingPlayers)
+	// t.Run("word-change-host-loses", TestSuccessfulGuessAndHostChange)
+	// t.Run("word-change-host-wins", TestHostWinsAndHostChange)
 }
 
 func TestAddingAndRemovingPlayers(t *testing.T) {
@@ -115,6 +117,28 @@ func TestTwoPeopleOneGame(t *testing.T) {
 	if original.guessed != gState.guessed {
 		t.Errorf("Expected guessed to be 'ajph', got %s", gState.guessed)
 	}
+}
+
+func TestRandomWord(t *testing.T) {
+	gState := newGame()
+	gState.newPlayer(player{username: "player 1"})
+	gState.newPlayer(player{username: "player 2"})
+	gState.newPlayer(player{username: "player 3"})
+	gState.randomNewWord()
+	fmt.Println(gState)
+	gState.guess('a')
+	fmt.Println(gState)
+	gState.guess('j')
+	fmt.Println(gState)
+	gState.guess('p')
+	fmt.Println(gState)
+	gState.guess('h')
+	fmt.Println(gState)
+	gState.guess('x')
+	fmt.Println(gState)
+	gState.guess('z')
+	fmt.Println(gState)
+
 }
 
 func TestFivePeopleTwoGames(t *testing.T) {

@@ -30,7 +30,7 @@ const ChatMessages: React.FC<ChatProps> = ({ chats, sendMessage, players, player
       }
       return (
         <div className="container">
-          <p>{message}</p>
+          <p style={{ display: "inline-block" }}>{element.message}</p>
           <span className="time-right">{element.sender}</span>
         </div>
       )
@@ -61,7 +61,7 @@ const ChatMessages: React.FC<ChatProps> = ({ chats, sendMessage, players, player
             }
 
           }} onChange={handleChange}></input>
-        <button type="button" onClick={() => { sendMessage(messageValue); setInputValue("") }}></button>
+        <button id="send-message" type="button" onClick={() => { sendMessage(messageValue); setInputValue("") }}></button>
       </div>
     );
   else return (<div />)

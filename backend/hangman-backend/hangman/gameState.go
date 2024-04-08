@@ -142,7 +142,7 @@ func (gState *gameState) guess(letter rune) (bool, clientState) {
 func (gState *gameState) randomNewWord() {
 	gState.mut.Lock()
 	defer gState.mut.Unlock()
-	x, _ := gState.wordCheck.Query("SELECT word FROM words WHERE LENGTH(word)>5 ORDER BY RANDOM() LIMIT 1;")
+	x, _ := gState.wordCheck.Query("SELECT word FROM words WHERE LENGTH(word)>5 and word not like '%-%' ORDER BY RANDOM() LIMIT 1;")
 	result := ""
 	if x.Next() {
 		x.Scan(&result)
