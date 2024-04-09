@@ -109,7 +109,7 @@ func game(
 			log.Println("tickertimeoutchannel")
 
 			gState := gameHashes[gameHash]
-			if len((gState).players) <= 1 {
+			if gState == nil || len((gState).players) <= 1 {
 				continue
 			}
 			go func() {

@@ -10,7 +10,6 @@ import { setGameHashCookie, setHashCookie } from './App';
 
 const HOST_WINS = 1
 const HOST_LOSES = 2
-const guessesLeftImages = [GAME_OVER]
 var game = new Game()
 
 interface HangmanComponentProps {
@@ -33,8 +32,8 @@ const HangmanComponent: React.FC<HangmanComponentProps> = ({ gameHash, reconnect
   console.log(gameHash, reconnect, hash)
 
 
-  // const _url = "http://localhost:8080"
-  const _url = "https://hangman-backend-geoffrey.com"
+  const _url = "http://localhost:8080"
+  // const _url = "https://hangman-backend-geoffrey.com"
   const stickFigure = (
     gameState ?
       gameState.winner === HOST_LOSES ?
@@ -56,7 +55,7 @@ const HangmanComponent: React.FC<HangmanComponentProps> = ({ gameHash, reconnect
 
 
   // const _url = "https://hangman-backend-geoffrey.com"
-  const _url = "http://localhost:8080"
+  // const _url = "http://localhost:8080"
   const exitGameButton = () => {
     console.log(hash)
     return (
@@ -82,12 +81,11 @@ const HangmanComponent: React.FC<HangmanComponentProps> = ({ gameHash, reconnect
   }
 
   useEffect(() => {
-    // const ws = new WebSocket('wss://hangman-backend-geoffrey.com/ws/' + gameIndex);
     var ws: WebSocket
     if (reconnect) {
-      ws = new WebSocket('wss://hangman-backend-geoffrey.com/reconnect/' + hash)
+      ws = new WebSocket('ws://localhost:8080/reconnect/' + hash + '/' + gameHash)
     } else {
-      ws = new WebSocket('wss://hangman-backend-geoffrey.com/ws/' + gameHash)
+      ws = new WebSocket('ws://localhost:8080/ws/' + gameHash)
     }
 
     ws.onopen = () => {
@@ -454,6 +452,7 @@ const HangmanComponent: React.FC<HangmanComponentProps> = ({ gameHash, reconnect
       {
         chats()
       }
+      <h2> game code {gameHash}</h2>
     </div>
   );
 };

@@ -181,8 +181,11 @@ func server(inputChannel chan input, timeoutChannel chan string, outputChannel c
 		gState := newGame()
 		newTickerInputChannel := make(chan (inputInfo))
 		tickerInputChannels[gState.gameHash] = newTickerInputChannel
+		fmt.Println(gState)
 		go (*gState).runTicker(tickerTimeoutChannel, newTickerInputChannel, closeGameChannel)
-		c.JSON(200, struct{ gameHash string }{gameHash: gState.gameHash})
+		c.JSON(200, struct {
+			GameHash string `json:"gameHash"`
+		}{GameHash: gState.gameHash})
 	})
 	r.GET("/get_games", func(c *gin.Context) {
 		c.String(http.StatusOK, "0")
@@ -206,16 +209,16 @@ func server(inputChannel chan input, timeoutChannel chan string, outputChannel c
 			return
 		}
 
-		if index := slices.IndexFunc(
-			gameHashes[gameHash].players,
-			func(p player) bool {
-				fmt.Println(p, hashes[playerHash], playerHash)
-				return p.hash == playerHash
-			}); index != -1 {
+		// if index := slices.IndexFunc(
+		// 	gameHashes[gameHash].players,
+		// 	func(p player) bool {
+		// 		fmt.Println(p, hashes[playerHash], playerHash)
+		// 		return p.hash == playerHash
+		// 	}); index != -1 {
 
-			conn.WriteJSON(clientState{Hash: "undefined", Warning: "1"})
-			return
-		}
+		// 	conn.WriteJSON(clientState{Hash: "undefined", Warning: "1"})
+		// 	return
+		// }
 
 		if gameHashes[gameHash] != nil {
 			handleWebSocket(conn, inputChannel, gameHashes[gameHash], true, playerHash)

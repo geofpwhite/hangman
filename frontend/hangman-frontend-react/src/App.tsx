@@ -3,6 +3,7 @@ import './App.css';
 import HangmanComponent from './hangman';
 import axios, { Axios } from 'axios'
 import Cookies from 'js-cookie';
+import { Route } from 'react-router-dom';
 
 export const TabTitle = (newTitle: string) => {
   return (document.title = newTitle);
@@ -26,9 +27,7 @@ export const setGameHashCookie = (hash: string) => {
 
 
 function App() {
-  const _url = "https://hangman-backend-geoffrey.com"
-  // const _url = "http://18.189.248.181:8080"
-  // const _url = "http://localhost:8080"
+  const _url = "http://localhost:8080"
 
   const [gameChoice, setGameChoice] = useState<string>("")
   const [gameCodeInput, setGameCodeInput] = useState<string>("")
@@ -64,7 +63,8 @@ function App() {
             setGameChoice(response.data)
           }
         })
-      }, []
+      }
+    }, []
   )
   const sendNewGame = () => {
     fetch(_url + "/new_game").then((response: any) => {
@@ -73,22 +73,21 @@ function App() {
       })
     })
   }
-  const selectGame = (gameHash: string, reconnect: boolean) => {
-    return (
-      <HangmanComponent gameHash={gameHash} reconnect={reconnect} hash={hash ? hash : ""} reset={exitGame}></HangmanComponent>
-    );
-  }
+  const selectGame = (gameHash: string, reconnect: boolean) => (
+    // <Route path="/:gameHash" element={<HangmanComponent gameHash={gameHash} reconnect={reconnect} hash={hash ? hash : ""} reset={exitGame}></HangmanComponent>} ></Route>
+    <HangmanComponent gameHash={gameHash} reconnect={reconnect} hash={hash ? hash : ""} reset={exitGame}></HangmanComponent>
+  )
   const typeInGameCode = () => {
     return (
       <div>
         <div className="game-code">
           <div>
             <label htmlFor="gameCode">
-              We need a new word </label>
+              type in a game code to join</label>
             <input
               type="text"
               id="gameCode"
-              value={gameChoice}
+              value={gameCodeInput}
               onChange={(event: React.ChangeEvent<HTMLInputElement>) => {
                 setGameCodeInput(event.target.value);
               }}
@@ -104,8 +103,7 @@ function App() {
 
 
   const needToSelectGame = () => {
-    let input = typeInGameCode()
-    return input
+    return typeInGameCode()
   }
 
   if (reconnect && hash !== "") {

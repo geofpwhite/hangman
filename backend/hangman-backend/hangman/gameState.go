@@ -198,7 +198,6 @@ func (gState *gameState) closeGame() {
 	for _, p := range gState.players {
 		delete(hashes, p.hash)
 	}
-	// gStates = slices.Delete(gStates, gState.gameIndex, gState.gameIndex+1)
 	delete(gameHashes, gState.gameHash)
 }
 
